@@ -58,6 +58,13 @@ public class ArticleContent implements Serializable{
 	public void setDomain(String domain) {
 		this.domain = domain;
 	}
+	@Override
+	public String toString() {
+		return "ArticleContent [title=" + title + ", description="
+				+ description + ", articleDate=" + articleDate + ", imageUrl="
+				+ imageUrl + ", url=" + url + ", logo=" + logo + ", domain="
+				+ domain + "]";
+	}
 	
 	
 	
