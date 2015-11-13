@@ -28,11 +28,16 @@ public class DateExtractor {
 	static String regexForDateWithNonDigitCharactes = "[1-2][0-9]|3[0-1]|(0)?[1-9](th|st|nd|rd|[^\\d\\w])?";
 	static String regexForhhmmss = "((1[0-9]|2[0-3]|(0)?[0-9]):([0-5][0-9])(:([0-5][0-9])(\\.[0-9]*)?)?)";
 	static String regexForAmPm = "(?i)(am|pm)";
+	static String regexForNumericYearDateFormat = "[\\d]{1,2}[\\W\\D][\\d]{1,2}[\\W][\\d]{4}|[\\d]{4}[\\W][\\d]{1,2}[\\W][\\d]{1,2}";
+	static String dateFilterTags = ".(\\*date\\*|pub\\*|\\*info\\*|\\*time\\*|\\*calendar\\*)";
 	static String regexForNumericDateFormat = "[0-9-/]{10}";
+	static String regexForSelectiontags = "[class~=(?i)(.*Pub.*|.*date.*|.*info.*|.*time.*|.*calendar.*|.*post.*)]";
 	static Pattern patternForZoneIdentification = Pattern
 			.compile(regExForTimeZones);
 	static Pattern patternForNumericDateFormat = Pattern
 			.compile(regexForNumericDateFormat);
+	static Pattern patternForNumericYearDateFormat = Pattern
+			.compile(regexForNumericYearDateFormat);
 	static Pattern patternForDateWithNonDigitCharactes = Pattern
 			.compile(regexForDateWithNonDigitCharactes);
 	static Pattern patternForAmPmInfo = Pattern.compile(regexForAmPm);
@@ -40,4 +45,5 @@ public class DateExtractor {
 	static Pattern patternForDate = Pattern.compile(regExForDate);
 	static Pattern patternForMonthName = Pattern.compile(regexForMonthName);
 	static Pattern patternforYearInDate = Pattern.compile(regexForYear);
+	static Pattern patternval = Pattern.compile(dateFilterTags);
 }

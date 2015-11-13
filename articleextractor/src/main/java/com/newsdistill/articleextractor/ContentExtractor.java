@@ -80,44 +80,25 @@ public class ContentExtractor implements BaseArticleExractor {
 
 	// idea try to create multile threads used exhisting
 	@Override
-	public ArticleContent getTotoalContent() {
+	public ArticleContent getTotoalContent()  {
 		URL pagelink = null;
 		String contentAvailableFrom = getContentFromUrl(Url);
 		contentIdentified.setUrl(this.Url);
 		contentIdentified.setDomain(getDomain());
 		contentIdentified.setImageUrl(getImage(contentAvailableFrom));
 		contentIdentified.setTitle(getTitle(contentAvailableFrom));
-		ArticleExtractor ce = null;
-
-		ExecutorService es = Executors.newFixedThreadPool(4);
-
+	
 		try {
-			pagelink = new URL(Url);
-			ce = CommonExtractors.ARTICLE_EXTRACTOR;
-			final HTMLHighlighter contentHighlighter = HTMLHighlighter
-					.newHighlightingInstance();
-			try {
-				String result = contentHighlighter.process(pagelink, ce);
-				result = "<html><head></head><body>" + result
-						+ "</body></html>";
-				result = result.replaceAll("<BR>", "");
-				result = result.replaceAll("</BR>", encodingForLineBreaks);
-				// System.out.println(result);
-				contentIdentified.setDescription(getDescription(result));
-
-			} catch (BoilerpipeProcessingException e) {
-
-				e.printStackTrace();
-			} catch (SAXException e) {
-
-			}
-
-		} catch (MalformedURLException mfue) {
-
-		} catch (IOException ioe) {
-
+		contentIdentified.setDescription(getDescription(new URL(this.Url)));
+		    } catch (MalformedURLException e) {
+			
+			e.printStackTrace();
 		}
+		
 		// should spawn 4 thereads
+		ExecutorService es = Executors.newFixedThreadPool(4);
+		contentIdentified.setArticleDate(getDate(contentAvailableFrom));
+		
 		return contentIdentified;
 	}
 
@@ -151,10 +132,37 @@ public class ContentExtractor implements BaseArticleExractor {
 		return titleObtained;
 
 	}
-
-	@Override
+     public String getDescription(URL url)
+     {
+    	 ArticleExtractor ce = null;
+    	 ce = CommonExtractors.ARTICLE_EXTRACTOR;
+    	 final HTMLHighlighter contentHighlighter = HTMLHighlighter
+					.newHighlightingInstance();
+			
+				String resultFromBoilerPipe="";
+				try {
+					resultFromBoilerPipe = contentHighlighter.process(url, ce);
+				} catch (IOException e) {
+					
+					e.printStackTrace();
+				} catch (BoilerpipeProcessingException e) {
+					
+					e.printStackTrace();
+				} catch (SAXException e) {
+					
+					e.printStackTrace();
+				}
+				resultFromBoilerPipe = "<html><head></head><body>" + resultFromBoilerPipe
+						+ "</body></html>";
+				resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>", "");
+				resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("</BR>", encodingForLineBreaks);
+			
+     
+			return	getCleanedDescription(resultFromBoilerPipe);
+			}
+	
 	// cleans up the description
-	public String getDescription(String htmlString) {
+	private String getCleanedDescription(String htmlString) {
 
 		Map<String, String> numberedTagWithContent = new LinkedHashMap<String, String>();
 		List<String> tagWithWordCount = new ArrayList<String>();
@@ -180,7 +188,7 @@ public class ContentExtractor implements BaseArticleExractor {
 					htmlString = htmlString.substring(endIndex);
 					absposition = absposition + tagName.length();
 				}
-				// stack.push(tagName + ":" + tagnumber);
+				
 
 			}
 			if (isEndofTheTag(htmlString)) {
@@ -233,19 +241,19 @@ public class ContentExtractor implements BaseArticleExractor {
 	}
 
 	@Override
-	public String getDate(String content) {
+	public Date getDate(String content) {
 
-		// if it url try to identify
-		// connnect using jsoup connecction
-		// if it is content then parse dem using
-		// html document
-		content = "<html><head></head><body>" + content + "</body></html>";
+		
+		//content = "<html><head></head><body>" + content + "</body></html>";
 		Document doc = Jsoup.parse(content);
 
-		getFinalDate(doc);
-
-		return null;
+		return getFinalDate(doc);
 	}
+	
+	/*public Date getDate(Document doc)
+	{
+		return getFinalDate(doc);
+	}*/
 
 	@Override
 	public String getImage(String conent) {
@@ -577,15 +585,12 @@ public class ContentExtractor implements BaseArticleExractor {
 
 	private Date getFinalDate(Document doc) {
 		Elements elems = null;
-		Elements removedScript = null;
-		List<String> datesAlongWithCount = new ArrayList<String>();
-		Set<String> setInfo = new LinkedHashSet<String>();
+		int dateindex = 0;
 		Map<String, Integer> mapForDate = new LinkedHashMap<String, Integer>();
-		Pattern pattern = Pattern.compile(dateWhileListTags);
+		Pattern pattern = Pattern.compile(DateExtractor.regexForSelectiontags);
 		elems = doc.getAllElements();
 		Elements allSelectedElements = elems.clone();
-		allSelectedElements = allSelectedElements
-				.select("[class~=(?i)(.*Pub.*|.*date.*|.*info.*|.*time.*|.*calendar.*|.*post.*)]");
+		allSelectedElements = allSelectedElements.select(DateExtractor.regexForSelectiontags);
 		for (Element e : allSelectedElements) {
 
 			if (e.text().toLowerCase().contains("2015")
@@ -598,12 +603,12 @@ public class ContentExtractor implements BaseArticleExractor {
 			Iterator<Attribute> it = node.iterator();
 			while (it.hasNext()) {
 
-				String regex = "(?i).*(date|pub|info|time|time|calendar).*";
-				Pattern patternval = Pattern.compile(dateWhileListTags);
+				
+				//Pattern patternval = Pattern.compile(dateWhileListTags);
 				Attribute attr = it.next();
 				String val = attr.getValue();
 				val = val.toLowerCase();
-				Matcher matcher = patternval.matcher(val);
+				Matcher matcher = DateExtractor.patternval.matcher(val);
 
 				if ((matcher.find() || !StringUtils.isEmpty(val))
 						&& (val.toLowerCase().contains("date") || val
@@ -620,58 +625,72 @@ public class ContentExtractor implements BaseArticleExractor {
 
 			}
 		}
+		List<Date> datesidentified = new ArrayList<Date>();
 		Set<String> dates = mapForDate.keySet();
-		// need some attention
 		if (dates.size() <= 0) {
-			return new Date();
+
+            Calendar calandar = Calendar.getInstance();
+            calandar.add(Calendar.HOUR, -2);
+            
+			return calandar.getTime();
 		} else if (dates.size() == 1) {
 			Object[] dateInfo = dates.toArray();
-			return getStandardCleanDate((String) dateInfo[0]);
-		}
 
+			Date dateval = getStandardCleanDate((String) dateInfo[0]);
+
+			if (isValidDate(dateval)) {
+
+				return dateval;
+
+			} else {
+                       Calendar calandar = Calendar.getInstance();
+                       calandar.add(Calendar.HOUR, -2);
+                       dateval=calandar.getTime();
+				return dateval;
+			}
+		}
 		else {
-			for (String key : dates) {
-				datesAlongWithCount.add(key + "@" + mapForDate.get(key));
-			}
-			DateComparator dc = new DateComparator();
-			Collections.sort(datesAlongWithCount, dc);
-			int index = 0;
-			while (index < datesAlongWithCount.size()) {
-				Date cleanedDate = getStandardCleanDate(datesAlongWithCount
-						.get(index));
-				if (isValidDate(cleanedDate)) {
-					return cleanedDate;
+			for (String datestring : dates) {
+
+				try {
+
+					datesidentified.add(getStandardCleanDate(datestring));
+
+				} catch (Exception e) {
+                     e.printStackTrace();
 				}
-				index++;
 			}
 		}
+		Collections.sort(datesidentified);
 
-		return null;
+		Collections.reverse(datesidentified);
+		for (Date dateobj : datesidentified) {
+			System.out.println(dateobj.toString());
+		}
+
+		while (!isValidDate(datesidentified.get(dateindex))) {
+
+			dateindex++;
+		}
+
+		return datesidentified.get(dateindex);
 	}
 
 	// counts number of times each date format type appeared
 
 	private static boolean isValidDate(Date dateToBeChecked) {
 		Calendar calendar = Calendar.getInstance();
-		calendar.add(Calendar.MINUTE, 10);
+
+		calendar.add(Calendar.MINUTE, -10);
+
 		Date currentDate = calendar.getTime();
-		System.out.println();
+
+		// System.out.println();
+
 		// checking that date must be less than current time stamp
-		boolean dateTobeReturned = (currentDate.before(dateToBeChecked)) ? false
+		boolean statusTobeReturned = (currentDate.before(dateToBeChecked)) ? false
 				: true;
-
-		if (dateTobeReturned) {
-			return !dateTobeReturned;
-		}
-
-		calendar.set(calendar.get(calendar.YEAR), calendar.get(calendar.MONTH),
-				calendar.get(calendar.DAY_OF_MONTH), 0, 0, 0);
-		Date beginningofcurrentDay = calendar.getTime();
-		// beginningofcurrentDay.getTime()
-		// TimeUnit.DAYS.convert(currentDate, TimeUnit.MILLISECONDS);
-		dateTobeReturned = !(beginningofcurrentDay.toString()
-				.equals(dateToBeChecked.toString()));
-		return false;
+		return statusTobeReturned;
 	}
 
 	private void dateCountMap(Map<String, Integer> mapForDate,
@@ -688,7 +707,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		mapForDate.put(dateInfoString, count);
 	}
 
-	public Date getStandardCleanDate(String dateToBeConverted) {
+	public Date getStandardCleanDate(String textToBeConverted) {
 		int begIndexForYear = 0;
 		int endIndexForYear = 0;
 		int begIndexForMonth = 0;
@@ -705,15 +724,18 @@ public class ContentExtractor implements BaseArticleExractor {
 		Calendar cal = Calendar.getInstance();
 		numericYear = cal.get(Calendar.YEAR);
 		numericMonth = cal.get(Calendar.MONTH) + 1;
+
 		numericDate = cal.get(Calendar.DATE);
 		String defaultZone = "";
 		String defalutyear = numericYear.toString();
 		String defalutDate = numericDate.toString().length() == 1 ? ("0" + numericDate
-				.toString()) : "0" + numericDate.toString();
+				.toString()) : numericDate.toString();
+		numericDate = null;
 		String defalutmonth = numericMonth.toString();
 		String defaluthourMinutes = "00:00:00";
 		String htmlDocument = "";
 		String amPmInfo = "";
+		htmlDocument = textToBeConverted;
 		if (isPageContainHourMinuteInfo(htmlDocument)) {
 
 			Matcher matcherForHourMinuteInfo = DateExtractor.patternForHourMinuteInfo
@@ -739,8 +761,8 @@ public class ContentExtractor implements BaseArticleExractor {
 			}
 			String amPmDataregion = htmlDocument.substring(endIndexForHourInfo,
 					Math.min(endIndexForHourInfo + 5, htmlDocument.length()));
-			Matcher matcherForAmPm = DateExtractor.patternForAmPmInfo
-					.matcher(htmlDocument.substring(
+			Matcher matcherForAmPm =DateExtractor. patternForAmPmInfo.matcher(htmlDocument
+					.substring(
 							endIndexForHourInfo,
 							Math.min(endIndexForHourInfo + 5,
 									htmlDocument.length())));
@@ -763,90 +785,149 @@ public class ContentExtractor implements BaseArticleExractor {
 						defaluthourMinutes = defaluthourMinutes + "00";
 					} else if (defaluthourMinutes.length() == 5) {
 						defaluthourMinutes = defaluthourMinutes + ":00";
-					} else {
+					} else if(defaluthourMinutes.length() == 7){
 						defaluthourMinutes = defaluthourMinutes + "0";
+					}
+					else
+					{
+						String dateComponents[]=defaluthourMinutes.split(":");
+						if(dateComponents[0].length()==1)
+						{
+							dateComponents[0]="0"+dateComponents[0];
+						}
+						
+						if(dateComponents[1].length()==1)
+						{
+							dateComponents[0]="0"+dateComponents[0];
+						}
+						
+						defaluthourMinutes=dateComponents[0]+":"+dateComponents[1]+":00";
 					}
 				}
 			}
 
 			String pretextContainingInformation = htmlDocument.substring(
 					Math.max(begIndexForHourInfo - 30, 0), begIndexForHourInfo);
-
-			Matcher mathcerForNumericDate = DateExtractor.patternForDateWithNonDigitCharactes
-					.matcher(pretextContainingInformation);
-			if (mathcerForNumericDate.find()) {
-				int begDateInfo = mathcerForNumericDate.start();
-				int endDateInfotemp = mathcerForNumericDate.end();
-				if (endIndexForDate == 0) {
-					defalutDate = pretextContainingInformation.substring(
-							begDateInfo, begDateInfo + 2);
-					defalutDate = defalutDate.replaceAll("[\\D]", "");
-					endIndexForDate = endDateInfotemp;
-				}
-				Matcher matcherForMonth = DateExtractor.patternForMonthName
+			// checks date whether Date format like yyyy-MM-DD or DD-MM-yyyy
+			if (isDateContainsNumericYearDateFormat(pretextContainingInformation)) {
+				Matcher matcherForNumericYearDateFormat =DateExtractor.patternForNumericYearDateFormat
 						.matcher(pretextContainingInformation);
-				if (matcherForMonth.find()) {
-					begIndexForMonth = matcherForMonth.start();
-					int endIndexForMonthtemp = matcherForMonth.end();
-					if (endIndexForMonth == 0) {
-						String monthInfo = pretextContainingInformation
-								.substring(begIndexForMonth,
-										endIndexForMonthtemp);
-						numericMonth = DateExtractor.monthsdata.get(monthInfo
-								.substring(0, 3).toLowerCase());
-						endIndexForMonth = endIndexForMonthtemp;
+				if (matcherForNumericYearDateFormat.find()) {
+					int start = matcherForNumericYearDateFormat.start();
+					int end = matcherForNumericYearDateFormat.end();
+					String dateYearMonth = pretextContainingInformation
+							.substring(start, end);
+					String datefields[] = dateYearMonth.split("\\D");
+					if (datefields[0].length() == 4) {
+						String temp = datefields[0];
+						datefields[0] = datefields[2];
+						datefields[2] = temp;
 					}
-				}
-
-				String dateObject = defalutDate + "-" + numericMonth + "-"
-						+ numericYear + "~" + defaluthourMinutes + "~"
-						+ amPmInfo;
-				constructDateFromDateObject(dateObject, ampmInformation);
-			} else {
-				/*
-				 * pretextContainingInformation = pretextContainingInformation
-				 * .replaceFirst(defalutyear, "");
-				 */
-				Matcher matcherForMonthName = DateExtractor.patternForMonthName
-						.matcher(pretextContainingInformation);
-				if (matcherForMonthName.find()) {
-					begIndexForMonth = matcherForMonthName.start();
-					endIndexForMonth = matcherForMonthName.end();
-					String monthName = pretextContainingInformation.substring(
-							begIndexForMonth, endIndexForMonth);
-					numericMonth = DateExtractor.monthsdata.get(monthName
-							.toLowerCase());
-					String textBetweenMonthAndHours = pretextContainingInformation
-							.substring(endIndexForMonth, begIndexForHourInfo);
-					// textBetweenMonthAndHours.
-					Matcher matcherForDate = DateExtractor.patternForDateWithNonDigitCharactes
-							.matcher(textBetweenMonthAndHours);
-					if (matcherForDate.find()) {
-						begIndexForDate = matcherForDate.start();
-						endIndexForDate = matcherForDate.end();
-						defalutDate = textBetweenMonthAndHours.substring(
-								begIndexForDate, endIndexForDate).substring(0,
-								2);
+					numericYear = Integer.parseInt(datefields[2]);
+					if (numericMonth == Integer.parseInt(datefields[0])) {
+						defalutDate = datefields[1];
+					} else if (Integer.parseInt(datefields[1]) > 12) {
+						numericMonth = Integer.parseInt(datefields[0]);
+						defalutDate = datefields[1];
 					} else {
-						String remainingStrigForDateLookUp = pretextContainingInformation
-								.substring(0, begIndexForMonth);
-						matcherForDate = DateExtractor.patternForDateWithNonDigitCharactes
-								.matcher(remainingStrigForDateLookUp);
-						if (matcherForDate.find()) {
-							begIndexForDate = matcherForDate.start();
-							endIndexForDate = matcherForDate.end();
-							defalutDate = remainingStrigForDateLookUp
-									.substring(begIndexForDate, endIndexForDate)
-									.substring(0, 2);
+						defalutDate = datefields[0];
+						numericMonth = Integer.parseInt(datefields[1]);
+					}
+
+				}
+			} else {
+				String textcontainingMonthDateInfo = null;
+				Matcher matcherForYearIndate = DateExtractor.patternforYearInDate
+						.matcher(pretextContainingInformation);
+				if (matcherForYearIndate.find()) {
+					begIndexForYear = matcherForYearIndate.start();
+					endIndexForYear = matcherForYearIndate.end();
+					String yearFound = pretextContainingInformation.substring(
+							begIndexForYear, endIndexForYear);
+					textcontainingMonthDateInfo = pretextContainingInformation
+							.replaceFirst(yearFound.substring(0,
+									yearFound.length() - 1), "");
+				}
+				else{
+					textcontainingMonthDateInfo=pretextContainingInformation;
+				}
+				Matcher mathcerForNumericDate =DateExtractor. patternForDateWithNonDigitCharactes
+						.matcher(textcontainingMonthDateInfo);
+				if (mathcerForNumericDate.find()) {
+					int begDateInfo = mathcerForNumericDate.start();
+					int endDateInfotemp = mathcerForNumericDate.end();
+					if (endIndexForDate == 0) {
+						defalutDate = textcontainingMonthDateInfo.substring(
+								begDateInfo, begDateInfo + 2);
+						defalutDate = defalutDate.replaceAll("[\\D]", "");
+						endIndexForDate = endDateInfotemp;
+					}
+					Matcher matcherForMonth = DateExtractor.patternForMonthName
+							.matcher(textcontainingMonthDateInfo);
+					if (matcherForMonth.find()) {
+						begIndexForMonth = matcherForMonth.start();
+						int endIndexForMonthtemp = matcherForMonth.end();
+						if (endIndexForMonth == 0) {
+							String monthInfo = textcontainingMonthDateInfo
+									.substring(begIndexForMonth,
+											endIndexForMonthtemp);
+							numericMonth = DateExtractor.monthsdata.get(monthInfo.substring(
+									0, 3).toLowerCase());
+							endIndexForMonth = endIndexForMonthtemp;
 						}
 					}
 
+					String dateObject = defalutDate + "-" + numericMonth + "-"
+							+ numericYear + "~" + defaluthourMinutes + "~"
+							+ amPmInfo;
+					constructDateFromDateObject(dateObject, ampmInformation);
+				} else {
+					/*
+					 * pretextContainingInformation =
+					 * pretextContainingInformation .replaceFirst(defalutyear,
+					 * "");
+					 */
+					Matcher matcherForMonthName = DateExtractor.patternForMonthName
+							.matcher(pretextContainingInformation);
+					if (matcherForMonthName.find()) {
+						begIndexForMonth = matcherForMonthName.start();
+						endIndexForMonth = matcherForMonthName.end();
+						String monthName = pretextContainingInformation
+								.substring(begIndexForMonth, endIndexForMonth);
+						numericMonth =DateExtractor. monthsdata.get(monthName.toLowerCase());
+						String textBetweenMonthAndHours = pretextContainingInformation
+								.substring(endIndexForMonth,
+										begIndexForHourInfo);
+						// textBetweenMonthAndHours.
+						Matcher matcherForDate =DateExtractor. patternForDateWithNonDigitCharactes
+								.matcher(textBetweenMonthAndHours);
+						if (matcherForDate.find()) {
+							begIndexForDate = matcherForDate.start();
+							endIndexForDate = matcherForDate.end();
+							defalutDate = textBetweenMonthAndHours.substring(
+									begIndexForDate, endIndexForDate)
+									.substring(0, 2);
+						} else {
+							String remainingStrigForDateLookUp = pretextContainingInformation
+									.substring(0, begIndexForMonth);
+							matcherForDate = DateExtractor.patternForDateWithNonDigitCharactes
+									.matcher(remainingStrigForDateLookUp);
+							if (matcherForDate.find()) {
+								begIndexForDate = matcherForDate.start();
+								endIndexForDate = matcherForDate.end();
+								defalutDate = remainingStrigForDateLookUp
+										.substring(begIndexForDate,
+												endIndexForDate)
+										.substring(0, 2);
+							}
+						}
+
+					}
 				}
 			}
 
 		} else if (isPageContainsCurrentYearInfo(htmlDocument)) {
-			Matcher matcherForYear = DateExtractor.patternforYearInDate
-					.matcher(htmlDocument);
+			Matcher matcherForYear =DateExtractor. patternforYearInDate.matcher(htmlDocument);
 			if (matcherForYear.find()) {
 				begIndexForYear = matcherForYear.start();
 				endIndexForYear = matcherForYear.end();
@@ -862,8 +943,8 @@ public class ContentExtractor implements BaseArticleExractor {
 					if (endIndexForMonth == 0) {
 						String monthInfo = textToBeSearched.substring(
 								begIndexForMonth, endIndexForMonthtemp);
-						numericMonth = DateExtractor.monthsdata.get(monthInfo
-								.substring(0, 3).toLowerCase());
+						numericMonth = DateExtractor.monthsdata.get(monthInfo.substring(0, 3)
+								.toLowerCase());
 						endIndexForMonth = endIndexForMonthtemp;
 						// once you identify month now look for date
 						String postTextMayContainDateInfo = textToBeSearched
@@ -873,7 +954,7 @@ public class ContentExtractor implements BaseArticleExractor {
 						String pretextmayContainDateInfo = textToBeSearched
 								.substring(Math.max(begIndexForMonth - 5, 0),
 										begIndexForMonth);
-						Matcher matcherForDate = DateExtractor.patternForDateWithNonDigitCharactes
+						Matcher matcherForDate =DateExtractor. patternForDateWithNonDigitCharactes
 								.matcher(pretextmayContainDateInfo);
 						if (matcherForDate.find()) {
 							begIndexForDate = matcherForDate.start();
@@ -918,12 +999,9 @@ public class ContentExtractor implements BaseArticleExractor {
 				}
 			}
 		}
-
 		String dateObject = defalutDate + "-" + numericMonth + "-"
 				+ numericYear + "~" + defaluthourMinutes + "~" + amPmInfo;
-		constructDateFromDateObject(dateObject, ampmInformation);
-
-		return null;
+		return constructDateFromDateObject(dateObject, ampmInformation);
 	}
 
 	public Date constructDateFromDateObject(String dataToBeConverted,
@@ -999,6 +1077,11 @@ public class ContentExtractor implements BaseArticleExractor {
 			ioe.printStackTrace();
 		}
 		return sb.toString();
+	}
+	public static boolean isDateContainsNumericYearDateFormat(String textData) {
+		Matcher matcherForNumericYearDate = DateExtractor.patternForNumericYearDateFormat
+				.matcher(textData);
+		return matcherForNumericYearDate.find();
 	}
 
 }

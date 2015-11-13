@@ -8,15 +8,28 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Attribute;
+import org.jsoup.nodes.Attributes;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 public class DateExtracter {
 	public final static Map<String, Integer> monthsdata = new LinkedHashMap<String, Integer>();
@@ -41,9 +54,14 @@ public class DateExtracter {
 	static String regexForDateWithNonDigitCharactes = "[1-2][0-9]|3[0-1]|(0)?[1-9](th|st|nd|rd|[^\\d\\w])?";
 	static String regexForhhmmss = "((1[0-9]|2[0-3]|(0)?[0-9]):([0-5][0-9])(:([0-5][0-9])(\\.[0-9]*)?)?)";
 	static String regexForAmPm = "(?i)(am|pm)";
+	static String regexForNumericYearDateFormat = "[\\d]{1,2}[\\W\\D][\\d]{1,2}[\\W][\\d]{4}|[\\d]{4}[\\W][\\d]{1,2}[\\W][\\d]{1,2}";
 	static String regexForNumericDateFormat = "[0-9-/]{10}";
+	static String dateFilterTags = ".(\\*date\\*|pub\\*|\\*info\\*|\\*time\\*|\\*calendar\\*)";
+	static String regexForSelectiontags = "[class~=(?i)(.*Pub.*|.*date.*|.*info.*|.*time.*|.*calendar.*|.*post.*)]";
 	static Pattern patternForZoneIdentification = Pattern
 			.compile(regExForTimeZones);
+	static Pattern patternForNumericYearDateFormat = Pattern
+			.compile(regexForNumericYearDateFormat);
 	static Pattern patternForNumericDateFormat = Pattern
 			.compile(regexForNumericDateFormat);
 	static Pattern patternForDateWithNonDigitCharactes = Pattern
@@ -53,8 +71,147 @@ public class DateExtracter {
 	static Pattern patternForDate = Pattern.compile(regExForDate);
 	static Pattern patternForMonthName = Pattern.compile(regexForMonthName);
 	static Pattern patternforYearInDate = Pattern.compile(regexForYear);
+	static Pattern patternval = Pattern.compile(dateFilterTags);
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String args[]) throws IOException {
+		Document htmlDoc = null;
+		String url = "http://www.sakshi.com/news/movies";
+		Connection connection = Jsoup.connect(url);
+		htmlDoc = connection.get();
+		Date documentDate = dateIdentifierBlock(htmlDoc);
+		System.out.println("date returned is" + documentDate);
+	}
+
+	public static Date dateIdentifierBlock(Document doc) {
+		Elements elems = null;
+		// Elements removedScript = null;
+		int dateindex = 0;
+		// Set<String> setInfo = new LinkedHashSet<String>();
+		Map<String, Integer> mapForDate = new LinkedHashMap<String, Integer>();
+		elems = doc.getAllElements();
+		Elements allSelectedElements = elems.clone();
+		allSelectedElements = allSelectedElements.select(regexForSelectiontags);
+		for (Element e : allSelectedElements) {
+
+			if (e.text().toLowerCase().contains("2015")
+					&& e.text().length() < 100) {
+				dateCountMap(mapForDate, e.text());
+			}
+		}
+		for (Element block : elems) {
+			Attributes node = block.attributes();
+			Iterator<Attribute> it = node.iterator();
+			while (it.hasNext()) {
+				Attribute attr = it.next();
+				String val = attr.getValue();
+				val = val.toLowerCase();
+				Matcher matcher = patternval.matcher(val);
+
+				if ((matcher.find() || !StringUtils.isEmpty(val))
+						&& (val.toLowerCase().contains("date") || val
+								.toLowerCase().contains("modified"))) {
+					String probableDate = block.attr("content");
+					if (!StringUtils.isEmpty(probableDate)
+							&& (probableDate.toLowerCase().contains("2015") && probableDate
+									.length() < 100)) {
+
+						dateCountMap(mapForDate, probableDate);
+						// break;
+					}
+				}
+
+			}
+		}
+		List<Date> datesidentified = new ArrayList<Date>();
+		Set<String> dates = mapForDate.keySet();
+		if (dates.size() <= 0) {
+
+            Calendar calandar = Calendar.getInstance();
+            calandar.add(Calendar.HOUR, -2);
+            
+			return calandar.getTime();
+		} else if (dates.size() == 1) {
+
+			Object[] dateInfo = dates.toArray();
+
+			Date dateval = dateCleanIngBlock((String) dateInfo[0]);
+
+			if (isValidDate(dateval)) {
+
+				return dateval;
+
+			} else {
+                       Calendar calandar = Calendar.getInstance();
+                       calandar.add(Calendar.HOUR, -2);
+                       dateval=calandar.getTime();
+				return dateval;
+			}
+
+		} else {
+
+			for (String datestring : dates) {
+
+				try {
+
+					datesidentified.add(dateCleanIngBlock(datestring));
+
+				} catch (Exception e) {
+                     e.printStackTrace();
+				}
+			}
+		}
+		Collections.sort(datesidentified);
+
+		Collections.reverse(datesidentified);
+		for (Date dateobj : datesidentified) {
+			System.out.println(dateobj.toString());
+		}
+
+		while (!isValidDate(datesidentified.get(dateindex))) {
+
+			dateindex++;
+		}
+
+		return datesidentified.get(dateindex);
+	}
+
+	private static void dateCountMap(Map<String, Integer> mapForDate,
+			String dateInfoString) {
+
+		Integer count = 0;
+
+		if (!mapForDate.containsKey(dateInfoString)) {
+
+			count = 1;
+
+		} else {
+
+			count = mapForDate.get(dateInfoString);
+
+			count++;
+		}
+
+		mapForDate.put(dateInfoString, count);
+	}
+
+	private static boolean isValidDate(Date dateToBeChecked) {
+
+		Calendar calendar = Calendar.getInstance();
+
+		calendar.add(Calendar.MINUTE, -10);
+
+		Date currentDate = calendar.getTime();
+
+		// System.out.println();
+
+		// checking that date must be less than current time stamp
+		boolean statusTobeReturned = (currentDate.before(dateToBeChecked)) ? false
+				: true;
+		return statusTobeReturned;
+
+	}
+
+	public static Date dateCleanIngBlock(String textContaingDateinfo) {
 
 		int begIndexForYear = 0;
 		int endIndexForYear = 0;
@@ -71,18 +228,19 @@ public class DateExtracter {
 		boolean ampmInformation = false;
 		Calendar cal = Calendar.getInstance();
 		numericYear = cal.get(Calendar.YEAR);
-		numericMonth = cal.get(Calendar.MONTH)+1;
-		
+		numericMonth = cal.get(Calendar.MONTH) + 1;
+
 		numericDate = cal.get(Calendar.DATE);
 		String defaultZone = "";
 		String defalutyear = numericYear.toString();
 		String defalutDate = numericDate.toString().length() == 1 ? ("0" + numericDate
-				.toString()) : "0" + numericDate.toString();
+				.toString()) : numericDate.toString();
+		numericDate = null;
 		String defalutmonth = numericMonth.toString();
 		String defaluthourMinutes = "00:00:00";
 		String htmlDocument = "";
 		String amPmInfo = "";
-		htmlDocument = "Sakshi | Updated: November 07th, 2015 18:02 (IST)";
+		htmlDocument = textContaingDateinfo;
 		if (isPageContainHourMinuteInfo(htmlDocument)) {
 
 			Matcher matcherForHourMinuteInfo = patternForHourMinuteInfo
@@ -132,83 +290,144 @@ public class DateExtracter {
 						defaluthourMinutes = defaluthourMinutes + "00";
 					} else if (defaluthourMinutes.length() == 5) {
 						defaluthourMinutes = defaluthourMinutes + ":00";
-					} else {
+					} else if(defaluthourMinutes.length() == 7){
 						defaluthourMinutes = defaluthourMinutes + "0";
+					}
+					else
+					{
+						String dateComponents[]=defaluthourMinutes.split(":");
+						if(dateComponents[0].length()==1)
+						{
+							dateComponents[0]="0"+dateComponents[0];
+						}
+						
+						if(dateComponents[1].length()==1)
+						{
+							dateComponents[0]="0"+dateComponents[0];
+						}
+						
+						defaluthourMinutes=dateComponents[0]+":"+dateComponents[1]+":00";
 					}
 				}
 			}
 
 			String pretextContainingInformation = htmlDocument.substring(
 					Math.max(begIndexForHourInfo - 30, 0), begIndexForHourInfo);
-
-			Matcher mathcerForNumericDate = patternForDateWithNonDigitCharactes
-					.matcher(pretextContainingInformation);
-			if (mathcerForNumericDate.find()) {
-				int begDateInfo = mathcerForNumericDate.start();
-				int endDateInfotemp = mathcerForNumericDate.end();
-				if (endIndexForDate == 0) {
-					defalutDate = pretextContainingInformation.substring(
-							begDateInfo, begDateInfo + 2);
-					defalutDate = defalutDate.replaceAll("[\\D]", "");
-					endIndexForDate = endDateInfotemp;
-				}
-				Matcher matcherForMonth = patternForMonthName
+			// checks date whether Date format like yyyy-MM-DD or DD-MM-yyyy
+			if (isDateContainsNumericYearDateFormat(pretextContainingInformation)) {
+				Matcher matcherForNumericYearDateFormat = patternForNumericYearDateFormat
 						.matcher(pretextContainingInformation);
-				if (matcherForMonth.find()) {
-					begIndexForMonth = matcherForMonth.start();
-					int endIndexForMonthtemp = matcherForMonth.end();
-					if (endIndexForMonth == 0) {
-						String monthInfo = pretextContainingInformation
-								.substring(begIndexForMonth,
-										endIndexForMonthtemp);
-						numericMonth = monthsdata.get(monthInfo.substring(0, 3)
-								.toLowerCase());
-						endIndexForMonth = endIndexForMonthtemp;
+				if (matcherForNumericYearDateFormat.find()) {
+					int start = matcherForNumericYearDateFormat.start();
+					int end = matcherForNumericYearDateFormat.end();
+					String dateYearMonth = pretextContainingInformation
+							.substring(start, end);
+					String datefields[] = dateYearMonth.split("\\D");
+					if (datefields[0].length() == 4) {
+						String temp = datefields[0];
+						datefields[0] = datefields[2];
+						datefields[2] = temp;
 					}
-				}
-
-				String dateObject = defalutDate + "-" + numericMonth + "-"
-						+ numericYear + "~" + defaluthourMinutes + "~"
-						+ amPmInfo;
-				constructDateFromDateObject(dateObject, ampmInformation);
-			} else {
-				/*
-				 * pretextContainingInformation = pretextContainingInformation
-				 * .replaceFirst(defalutyear, "");
-				 */
-				Matcher matcherForMonthName = patternForMonthName
-						.matcher(pretextContainingInformation);
-				if (matcherForMonthName.find()) {
-					begIndexForMonth = matcherForMonthName.start();
-					endIndexForMonth = matcherForMonthName.end();
-					String monthName = pretextContainingInformation.substring(
-							begIndexForMonth, endIndexForMonth);
-					numericMonth = monthsdata.get(monthName.toLowerCase());
-					String textBetweenMonthAndHours = pretextContainingInformation
-							.substring(endIndexForMonth, begIndexForHourInfo);
-					// textBetweenMonthAndHours.
-					Matcher matcherForDate = patternForDateWithNonDigitCharactes
-							.matcher(textBetweenMonthAndHours);
-					if (matcherForDate.find()) {
-						begIndexForDate = matcherForDate.start();
-						endIndexForDate = matcherForDate.end();
-						defalutDate = textBetweenMonthAndHours.substring(
-								begIndexForDate, endIndexForDate).substring(0,
-								2);
+					numericYear = Integer.parseInt(datefields[2]);
+					if (numericMonth == Integer.parseInt(datefields[0])) {
+						defalutDate = datefields[1];
+					} else if (Integer.parseInt(datefields[1]) > 12) {
+						numericMonth = Integer.parseInt(datefields[0]);
+						defalutDate = datefields[1];
 					} else {
-						String remainingStrigForDateLookUp = pretextContainingInformation
-								.substring(0, begIndexForMonth);
-						matcherForDate = patternForDateWithNonDigitCharactes
-								.matcher(remainingStrigForDateLookUp);
-						if (matcherForDate.find()) {
-							begIndexForDate = matcherForDate.start();
-							endIndexForDate = matcherForDate.end();
-							defalutDate = remainingStrigForDateLookUp
-									.substring(begIndexForDate, endIndexForDate)
-									.substring(0, 2);
+						defalutDate = datefields[0];
+						numericMonth = Integer.parseInt(datefields[1]);
+					}
+
+				}
+			} else {
+				String textcontainingMonthDateInfo = null;
+				Matcher matcherForYearIndate = patternforYearInDate
+						.matcher(pretextContainingInformation);
+				if (matcherForYearIndate.find()) {
+					begIndexForYear = matcherForYearIndate.start();
+					endIndexForYear = matcherForYearIndate.end();
+					String yearFound = pretextContainingInformation.substring(
+							begIndexForYear, endIndexForYear);
+					textcontainingMonthDateInfo = pretextContainingInformation
+							.replaceFirst(yearFound.substring(0,
+									yearFound.length() - 1), "");
+				}
+				else{
+					textcontainingMonthDateInfo=pretextContainingInformation;
+				}
+				Matcher mathcerForNumericDate = patternForDateWithNonDigitCharactes
+						.matcher(textcontainingMonthDateInfo);
+				if (mathcerForNumericDate.find()) {
+					int begDateInfo = mathcerForNumericDate.start();
+					int endDateInfotemp = mathcerForNumericDate.end();
+					if (endIndexForDate == 0) {
+						defalutDate = textcontainingMonthDateInfo.substring(
+								begDateInfo, begDateInfo + 2);
+						defalutDate = defalutDate.replaceAll("[\\D]", "");
+						endIndexForDate = endDateInfotemp;
+					}
+					Matcher matcherForMonth = patternForMonthName
+							.matcher(textcontainingMonthDateInfo);
+					if (matcherForMonth.find()) {
+						begIndexForMonth = matcherForMonth.start();
+						int endIndexForMonthtemp = matcherForMonth.end();
+						if (endIndexForMonth == 0) {
+							String monthInfo = textcontainingMonthDateInfo
+									.substring(begIndexForMonth,
+											endIndexForMonthtemp);
+							numericMonth = monthsdata.get(monthInfo.substring(
+									0, 3).toLowerCase());
+							endIndexForMonth = endIndexForMonthtemp;
 						}
 					}
 
+					String dateObject = defalutDate + "-" + numericMonth + "-"
+							+ numericYear + "~" + defaluthourMinutes + "~"
+							+ amPmInfo;
+					constructDateFromDateObject(dateObject, ampmInformation);
+				} else {
+					/*
+					 * pretextContainingInformation =
+					 * pretextContainingInformation .replaceFirst(defalutyear,
+					 * "");
+					 */
+					Matcher matcherForMonthName = patternForMonthName
+							.matcher(pretextContainingInformation);
+					if (matcherForMonthName.find()) {
+						begIndexForMonth = matcherForMonthName.start();
+						endIndexForMonth = matcherForMonthName.end();
+						String monthName = pretextContainingInformation
+								.substring(begIndexForMonth, endIndexForMonth);
+						numericMonth = monthsdata.get(monthName.toLowerCase());
+						String textBetweenMonthAndHours = pretextContainingInformation
+								.substring(endIndexForMonth,
+										begIndexForHourInfo);
+						// textBetweenMonthAndHours.
+						Matcher matcherForDate = patternForDateWithNonDigitCharactes
+								.matcher(textBetweenMonthAndHours);
+						if (matcherForDate.find()) {
+							begIndexForDate = matcherForDate.start();
+							endIndexForDate = matcherForDate.end();
+							defalutDate = textBetweenMonthAndHours.substring(
+									begIndexForDate, endIndexForDate)
+									.substring(0, 2);
+						} else {
+							String remainingStrigForDateLookUp = pretextContainingInformation
+									.substring(0, begIndexForMonth);
+							matcherForDate = patternForDateWithNonDigitCharactes
+									.matcher(remainingStrigForDateLookUp);
+							if (matcherForDate.find()) {
+								begIndexForDate = matcherForDate.start();
+								endIndexForDate = matcherForDate.end();
+								defalutDate = remainingStrigForDateLookUp
+										.substring(begIndexForDate,
+												endIndexForDate)
+										.substring(0, 2);
+							}
+						}
+
+					}
 				}
 			}
 
@@ -252,14 +471,14 @@ public class DateExtracter {
 						} else {
 							matcherForDate = patternForDateWithNonDigitCharactes
 									.matcher(postTextMayContainDateInfo);
-							if(matcherForDate.find())
-							{
-							begIndexForDate = matcherForDate.start();
-							endIndexForDate = matcherForDate.end();
-							String textContaningDate = postTextMayContainDateInfo
-									.substring(begIndexForDate, endIndexForDate);
-							defalutDate = textContaningDate.replaceAll("\\D",
-									"");
+							if (matcherForDate.find()) {
+								begIndexForDate = matcherForDate.start();
+								endIndexForDate = matcherForDate.end();
+								String textContaningDate = postTextMayContainDateInfo
+										.substring(begIndexForDate,
+												endIndexForDate);
+								defalutDate = textContaningDate.replaceAll(
+										"\\D", "");
 							}
 						}
 
@@ -267,16 +486,15 @@ public class DateExtracter {
 				} else {
 					Matcher matcherForDate = patternForDateWithNonDigitCharactes
 							.matcher(textToBeSearched);
-					if(matcherForDate.find())
-					{
-					begIndexForDate = matcherForDate.start();
-					endIndexForDate = matcherForDate.end();
-					String textContaningDate = textToBeSearched.substring(
-							begIndexForDate, endIndexForDate);
-					defalutDate = textContaningDate.replaceAll("\\D", "");
-					defalutDate = defalutDate.replaceAll("\\D", "");
-					defalutDate = defalutDate.substring(0,
-							Math.min(defalutDate.length(), 2));
+					if (matcherForDate.find()) {
+						begIndexForDate = matcherForDate.start();
+						endIndexForDate = matcherForDate.end();
+						String textContaningDate = textToBeSearched.substring(
+								begIndexForDate, endIndexForDate);
+						defalutDate = textContaningDate.replaceAll("\\D", "");
+						defalutDate = defalutDate.replaceAll("\\D", "");
+						defalutDate = defalutDate.substring(0,
+								Math.min(defalutDate.length(), 2));
 					}
 				}
 
@@ -288,7 +506,7 @@ public class DateExtracter {
 		}
 		String dateObject = defalutDate + "-" + numericMonth + "-"
 				+ numericYear + "~" + defaluthourMinutes + "~" + amPmInfo;
-		constructDateFromDateObject(dateObject, ampmInformation);
+		return constructDateFromDateObject(dateObject, ampmInformation);
 	}
 
 	// this downloads the page in to local machine the identifies date From the
@@ -340,13 +558,13 @@ public class DateExtracter {
 			}
 			dataToBeConverted = datevalue[0] + " " + datevalue[1];
 			if (ampmInfo) {
-				dataToBeConverted = dataToBeConverted + " " + datevalue[2];
+				dataToBeConverted = dataToBeConverted + " " + datevalue[2].toLowerCase();
 			}
 			SimpleDateFormat dateFormatter = new SimpleDateFormat(dateFormat
 					+ hourInfo);
 			try {
 				dateTobeReturned = dateFormatter.parse(dataToBeConverted);
-				System.out.println(dateTobeReturned.toString());
+				// System.out.println(dateTobeReturned.toString());
 			} catch (ParseException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -382,6 +600,12 @@ public class DateExtracter {
 			datetoBeReturned = calender.getTime();
 		}
 		return datetoBeReturned;
+	}
+
+	public static boolean isDateContainsNumericYearDateFormat(String textData) {
+		Matcher matcherForNumericYearDate = patternForNumericYearDateFormat
+				.matcher(textData);
+		return matcherForNumericYearDate.find();
 	}
 
 }
