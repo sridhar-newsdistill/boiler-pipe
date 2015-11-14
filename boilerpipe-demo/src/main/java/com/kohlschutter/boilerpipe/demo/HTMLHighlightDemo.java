@@ -17,10 +17,16 @@
  */
 package com.kohlschutter.boilerpipe.demo;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.net.URLConnection;
 
 import com.kohlschutter.boilerpipe.BoilerpipeExtractor;
+import com.kohlschutter.boilerpipe.document.TextDocument;
 import com.kohlschutter.boilerpipe.extractors.CommonExtractors;
 import com.kohlschutter.boilerpipe.sax.HTMLHighlighter;
 
@@ -33,9 +39,11 @@ public class HTMLHighlightDemo {
   public static void main(String[] args) throws Exception {
     URL url =
         new URL(
-            "http://www.pallibatani.com/telugu/view-8965-telugu-cinema-news-columbus-telugu-movie-censor-report.html");
+            "http://timesofindia.indiatimes.com/entertainment/hindi/movie-reviews/Charlie-Kay-Chakkar-Mein/movie-review/49690808.cms");
 
     // choose from a set of useful BoilerpipeExtractors...
+    TextDocument doc=null;
+    fetchContentFromUrl(url);
     final BoilerpipeExtractor extractor = CommonExtractors.ARTICLE_EXTRACTOR;
     // final BoilerpipeExtractor extractor = CommonExtractors.DEFAULT_EXTRACTOR;
     // final BoilerpipeExtractor extractor = CommonExtractors.CANOLA_EXTRACTOR;
@@ -49,8 +57,32 @@ public class HTMLHighlightDemo {
     out.println("<base href=\"" + url + "\" >");
     out.println("<meta http-equiv=\"Content-Type\" content=\"text-html; charset=utf-8\" />");
     out.println(hh.process(url, extractor));
+   // out.println( hh.process(doc,fetchContentFromUrl(url)));
+    ;
+    
     out.close();
 
     System.out.println("Now open file:///tmp/highlighted.html in your web browser");
+  }
+  public static String fetchContentFromUrl(URL url)
+  {
+	  String data=null;
+	  InputStream ins=null;
+	  StringBuilder sbr=new StringBuilder();
+	  URLConnection urlc=null;
+ try {
+	 urlc=	  url.openConnection();
+	 ins=urlc.getInputStream();
+	 BufferedReader br= new BufferedReader(new InputStreamReader(ins));
+	 while((data=br.readLine())!=null)
+	 {
+		 sbr.append(data);
+	 }
+} catch (IOException e) {
+	// TODO Auto-generated catch block
+	e.printStackTrace();
+}
+ System.out.println(sbr.toString());
+ return sbr.toString();
   }
 }

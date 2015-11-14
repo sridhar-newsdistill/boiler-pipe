@@ -20,6 +20,7 @@ package com.kohlschutter.boilerpipe.sax;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,6 +39,7 @@ import com.kohlschutter.boilerpipe.BoilerpipeExtractor;
 import com.kohlschutter.boilerpipe.BoilerpipeProcessingException;
 import com.kohlschutter.boilerpipe.document.TextBlock;
 import com.kohlschutter.boilerpipe.document.TextDocument;
+
 import org.cyberneko.html.HTMLConfiguration;
 
 /**
@@ -166,6 +168,15 @@ public class HTMLHighlighter {
     final InputSource is = htmlDoc.toInputSource();
 
     return processTargetHtml(doc, is);
+  }
+  public String process (final URL url, final BoilerpipeExtractor extractor,byte[] content,Charset cs )throws IOException,BoilerpipeProcessingException, SAXException
+  {
+	  final HTMLDocument htmlDoc= new HTMLDocument(content, cs);
+	  final TextDocument doc = new BoilerpipeSAXInput(htmlDoc.toInputSource()).getTextDocument();
+	  extractor.process(doc);
+	    document= doc;
+	    final InputSource is = htmlDoc.toInputSource();
+	    return processTargetHtml(doc, is);
   }
   public String processHtml() 
   {

@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -15,19 +16,15 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Attributes;
@@ -37,7 +34,6 @@ import org.jsoup.select.Elements;
 import org.xml.sax.SAXException;
 
 import com.kohlschutter.boilerpipe.BoilerpipeProcessingException;
-import com.kohlschutter.boilerpipe.document.TextBlock;
 import com.kohlschutter.boilerpipe.extractors.ArticleExtractor;
 import com.kohlschutter.boilerpipe.extractors.CommonExtractors;
 import com.kohlschutter.boilerpipe.sax.HTMLHighlighter;
@@ -48,7 +44,7 @@ public class ContentExtractor implements BaseArticleExractor {
 	StringTokenizer titleTokens = new StringTokenizer(titleTags, "|");
 	static String encodingForLineBreaks = "1922135";
 	static String encodingForImageTags = "5312219";
-	static String noTagEncoding="<5312219>";
+	static String noTagEncoding = "<5312219>";
 	static String regExToFindStartOfTheString = "^<[^>/]*>";
 	static String regExForEndOfTheTag = "^</[^>]*>";
 	static String delimiterBeforeOpenAndClosingTags = "<";
@@ -73,6 +69,7 @@ public class ContentExtractor implements BaseArticleExractor {
 
 	private ArticleContent contentIdentified = new ArticleContent();
 	private String Url;
+	private Charset cs = null;
 
 	public ContentExtractor(String url) {
 		this.Url = url;
@@ -80,25 +77,44 @@ public class ContentExtractor implements BaseArticleExractor {
 
 	// idea try to create multile threads used exhisting
 	@Override
-	public ArticleContent getTotoalContent()  {
+	public ArticleContent getTotoalContent() {
 		URL pagelink = null;
-		String contentAvailableFrom = getContentFromUrl(Url);
+		byte[] htmlBytes = null;
+
+		try {
+			Map<String, Object> resultMap = HTMLFetcherUtil
+					.getBytesFromURL(new URL(this.Url));
+			htmlBytes = (byte[]) resultMap.get("bytes");
+			this.cs = (Charset) resultMap.get("charset");
+		} catch (MalformedURLException e1) {
+			
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			
+			e1.printStackTrace();
+		}
+
+		
+		String contentAvailableFrom = new String(htmlBytes);
 		contentIdentified.setUrl(this.Url);
 		contentIdentified.setDomain(getDomain());
 		contentIdentified.setImageUrl(getImage(contentAvailableFrom));
 		contentIdentified.setTitle(getTitle(contentAvailableFrom));
-	
+
 		try {
-		contentIdentified.setDescription(getDescription(new URL(this.Url)));
-		    } catch (MalformedURLException e) {
-			
+			contentIdentified.setDescription(getDescription(new URL(this.Url),
+					htmlBytes));
+		} catch (MalformedURLException e) {
+
 			e.printStackTrace();
+		} catch (IndexOutOfBoundsException arrayIndexRange) {
+			arrayIndexRange.printStackTrace();
 		}
-		
+
 		// should spawn 4 thereads
-		ExecutorService es = Executors.newFixedThreadPool(4);
+		// ExecutorService es = Executors.newFixedThreadPool(4);
 		contentIdentified.setArticleDate(getDate(contentAvailableFrom));
-		
+
 		return contentIdentified;
 	}
 
@@ -106,10 +122,10 @@ public class ContentExtractor implements BaseArticleExractor {
 	public String getTitle(String content) {
 
 		Document htmldoc = null;
-		String titleObtained = null;
-		
-		htmldoc=Jsoup.parse(content);
-		
+		String doucmentTitle = null;
+
+		htmldoc = Jsoup.parse(content);
+
 		if (htmldoc == null) {
 			return null;
 		}
@@ -119,48 +135,85 @@ public class ContentExtractor implements BaseArticleExractor {
 			if (elements == null || elements.first() == null) {
 				continue;
 			}
-
-			titleObtained = elements.first().text();
-			if (!StringUtils.isEmpty(titleObtained)
-					&& titleObtained.length() >= 7) {
-				break;
-			} else {
-				continue;
+			else{
+				for (Element element : elements) {
+				  if(!StringUtils.isBlank(element.text())&&element.text().length()>15)
+				  {
+					  doucmentTitle = element.html();
+				  }
+				  else{
+					  continue;
+				  }
+				}
 			}
+
 		}
-		System.out.println(titleObtained);
-		return titleObtained;
+		
+		return doucmentTitle;
 
 	}
-     public String getDescription(URL url)
-     {
-    	 ArticleExtractor ce = null;
-    	 ce = CommonExtractors.ARTICLE_EXTRACTOR;
-    	 final HTMLHighlighter contentHighlighter = HTMLHighlighter
-					.newHighlightingInstance();
+
+	public String getDescription(URL url) {
+		ArticleExtractor ce = null;
+		ce = CommonExtractors.ARTICLE_EXTRACTOR;
+		final HTMLHighlighter contentHighlighter = HTMLHighlighter
+				.newHighlightingInstance();
+
+		String resultFromBoilerPipe = "";
+		try {
+			resultFromBoilerPipe = contentHighlighter.process(url, ce);
+
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		} catch (BoilerpipeProcessingException e) {
+
+			e.printStackTrace();
+		} catch (SAXException e) {
+
+			e.printStackTrace();
+		}
+		resultFromBoilerPipe = "<html><head></head><body>"
+				+ resultFromBoilerPipe + "</body></html>";
+		resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>", "");
+		resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("</BR>",
+				encodingForLineBreaks);
+
+		return getCleanedDescription(resultFromBoilerPipe);
+
+	}
+
+	public String getDescription(URL url, byte[] contentInBytes) {
+		ArticleExtractor ce = null;
+		ce = CommonExtractors.ARTICLE_EXTRACTOR;
+		final HTMLHighlighter contentHighlighter = HTMLHighlighter
+				.newHighlightingInstance();
+
+		String resultFromBoilerPipe = "";
+		try {
 			
-				String resultFromBoilerPipe="";
-				try {
-					resultFromBoilerPipe = contentHighlighter.process(url, ce);
-				} catch (IOException e) {
-					
-					e.printStackTrace();
-				} catch (BoilerpipeProcessingException e) {
-					
-					e.printStackTrace();
-				} catch (SAXException e) {
-					
-					e.printStackTrace();
-				}
-				resultFromBoilerPipe = "<html><head></head><body>" + resultFromBoilerPipe
-						+ "</body></html>";
-				resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>", "");
-				resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("</BR>", encodingForLineBreaks);
-			
-     
-			return	getCleanedDescription(resultFromBoilerPipe);
-			}
-	
+			resultFromBoilerPipe = contentHighlighter.process(url, ce,
+					contentInBytes, this.cs);
+
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		} catch (BoilerpipeProcessingException e) {
+
+			e.printStackTrace();
+		} catch (SAXException e) {
+
+			e.printStackTrace();
+		}
+		resultFromBoilerPipe = "<html><head></head><body>"
+				+ resultFromBoilerPipe + "</body></html>";
+		resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>", "");
+		resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("</BR>",
+				encodingForLineBreaks);
+
+		return getCleanedDescription(resultFromBoilerPipe);
+	}
+
 	// cleans up the description
 	private String getCleanedDescription(String htmlString) {
 
@@ -188,7 +241,6 @@ public class ContentExtractor implements BaseArticleExractor {
 					htmlString = htmlString.substring(endIndex);
 					absposition = absposition + tagName.length();
 				}
-				
 
 			}
 			if (isEndofTheTag(htmlString)) {
@@ -243,17 +295,15 @@ public class ContentExtractor implements BaseArticleExractor {
 	@Override
 	public Date getDate(String content) {
 
-		
-		//content = "<html><head></head><body>" + content + "</body></html>";
+		// content = "<html><head></head><body>" + content + "</body></html>";
 		Document doc = Jsoup.parse(content);
 
 		return getFinalDate(doc);
 	}
-	
-	/*public Date getDate(Document doc)
-	{
-		return getFinalDate(doc);
-	}*/
+
+	/*
+	 * public Date getDate(Document doc) { return getFinalDate(doc); }
+	 */
 
 	@Override
 	public String getImage(String conent) {
@@ -281,8 +331,8 @@ public class ContentExtractor implements BaseArticleExractor {
 			if (imageTag != null) {
 				if (imageTag.tagName().equalsIgnoreCase("meta")) {
 					imageUrl = imageTag.attr("content");
-					System.out.println("image");
-					System.out.println(imageUrl);
+					// System.out.println("image");
+					// System.out.println(imageUrl);
 				}
 
 				break;
@@ -305,7 +355,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		try {
 			URL articleUrl = new URL(Url);
 			domain = articleUrl.getHost();
-			System.out.println(domain);
+			// System.out.println(domain);
 		} catch (MalformedURLException e) {
 
 			e.printStackTrace();
@@ -402,9 +452,11 @@ public class ContentExtractor implements BaseArticleExractor {
 					&& tagMetaData.getTagName().toLowerCase().contains("<a>")) {
 				continue;
 			}
-			String content=text.trim().replaceAll("1922135", "</br>");
-			content=content.replaceAll(noTagEncoding, "");
-			content=content.replaceAll("</"+ noTagEncoding.substring(1, noTagEncoding.length()), "");
+			String content = text.trim().replaceAll("1922135", "</br>");
+			content = content.replaceAll(noTagEncoding, "");
+			content = content.replaceAll(
+					"</" + noTagEncoding.substring(1, noTagEncoding.length()),
+					"");
 			tagMetaData.setText(content.trim().replaceAll("1922135", "</br>"));
 			tagMetaData.setWordCount(Utils.getWordCount(text.trim()));
 			tagMetaData.setIndex(index);
@@ -492,11 +544,12 @@ public class ContentExtractor implements BaseArticleExractor {
 
 		String metaDataForTitle = searchTitleMetaData(tagContentLenghts);
 		if (!StringUtils.isEmpty(metaDataForTitle)) {
-			System.out.println(" title"
-					+ tagContent.get(metaDataForTitle.split(":")[0])
-					+ "end of title");
+			/*
+			 * System.out.println(" title" +
+			 * tagContent.get(metaDataForTitle.split(":")[0]) + "end of title");
+			 */
 		}
-		//System.out.println(description.toString().replaceAll("[\\s]+", " "));
+		// System.out.println(description.toString().replaceAll("[\\s]+", " "));
 
 		return description.toString().replaceAll("[\\s]+", " ");
 	}
@@ -590,7 +643,8 @@ public class ContentExtractor implements BaseArticleExractor {
 		Pattern pattern = Pattern.compile(DateExtractor.regexForSelectiontags);
 		elems = doc.getAllElements();
 		Elements allSelectedElements = elems.clone();
-		allSelectedElements = allSelectedElements.select(DateExtractor.regexForSelectiontags);
+		allSelectedElements = allSelectedElements
+				.select(DateExtractor.regexForSelectiontags);
 		for (Element e : allSelectedElements) {
 
 			if (e.text().toLowerCase().contains("2015")
@@ -603,8 +657,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			Iterator<Attribute> it = node.iterator();
 			while (it.hasNext()) {
 
-				
-				//Pattern patternval = Pattern.compile(dateWhileListTags);
+				// Pattern patternval = Pattern.compile(dateWhileListTags);
 				Attribute attr = it.next();
 				String val = attr.getValue();
 				val = val.toLowerCase();
@@ -629,9 +682,9 @@ public class ContentExtractor implements BaseArticleExractor {
 		Set<String> dates = mapForDate.keySet();
 		if (dates.size() <= 0) {
 
-            Calendar calandar = Calendar.getInstance();
-            calandar.add(Calendar.HOUR, -2);
-            
+			Calendar calandar = Calendar.getInstance();
+			calandar.add(Calendar.HOUR, -2);
+
 			return calandar.getTime();
 		} else if (dates.size() == 1) {
 			Object[] dateInfo = dates.toArray();
@@ -643,13 +696,12 @@ public class ContentExtractor implements BaseArticleExractor {
 				return dateval;
 
 			} else {
-                       Calendar calandar = Calendar.getInstance();
-                       calandar.add(Calendar.HOUR, -2);
-                       dateval=calandar.getTime();
+				Calendar calandar = Calendar.getInstance();
+				calandar.add(Calendar.HOUR, -2);
+				dateval = calandar.getTime();
 				return dateval;
 			}
-		}
-		else {
+		} else {
 			for (String datestring : dates) {
 
 				try {
@@ -657,16 +709,17 @@ public class ContentExtractor implements BaseArticleExractor {
 					datesidentified.add(getStandardCleanDate(datestring));
 
 				} catch (Exception e) {
-                     e.printStackTrace();
+					e.printStackTrace();
 				}
 			}
 		}
 		Collections.sort(datesidentified);
 
 		Collections.reverse(datesidentified);
-		for (Date dateobj : datesidentified) {
-			System.out.println(dateobj.toString());
-		}
+		/*
+		 * for (Date dateobj : datesidentified) {
+		 * System.out.println(dateobj.toString()); }
+		 */
 
 		while (!isValidDate(datesidentified.get(dateindex))) {
 
@@ -761,8 +814,8 @@ public class ContentExtractor implements BaseArticleExractor {
 			}
 			String amPmDataregion = htmlDocument.substring(endIndexForHourInfo,
 					Math.min(endIndexForHourInfo + 5, htmlDocument.length()));
-			Matcher matcherForAmPm =DateExtractor. patternForAmPmInfo.matcher(htmlDocument
-					.substring(
+			Matcher matcherForAmPm = DateExtractor.patternForAmPmInfo
+					.matcher(htmlDocument.substring(
 							endIndexForHourInfo,
 							Math.min(endIndexForHourInfo + 5,
 									htmlDocument.length())));
@@ -785,23 +838,20 @@ public class ContentExtractor implements BaseArticleExractor {
 						defaluthourMinutes = defaluthourMinutes + "00";
 					} else if (defaluthourMinutes.length() == 5) {
 						defaluthourMinutes = defaluthourMinutes + ":00";
-					} else if(defaluthourMinutes.length() == 7){
+					} else if (defaluthourMinutes.length() == 7) {
 						defaluthourMinutes = defaluthourMinutes + "0";
-					}
-					else
-					{
-						String dateComponents[]=defaluthourMinutes.split(":");
-						if(dateComponents[0].length()==1)
-						{
-							dateComponents[0]="0"+dateComponents[0];
+					} else {
+						String dateComponents[] = defaluthourMinutes.split(":");
+						if (dateComponents[0].length() == 1) {
+							dateComponents[0] = "0" + dateComponents[0];
 						}
-						
-						if(dateComponents[1].length()==1)
-						{
-							dateComponents[0]="0"+dateComponents[0];
+
+						if (dateComponents[1].length() == 1) {
+							dateComponents[0] = "0" + dateComponents[0];
 						}
-						
-						defaluthourMinutes=dateComponents[0]+":"+dateComponents[1]+":00";
+
+						defaluthourMinutes = dateComponents[0] + ":"
+								+ dateComponents[1] + ":00";
 					}
 				}
 			}
@@ -810,7 +860,7 @@ public class ContentExtractor implements BaseArticleExractor {
 					Math.max(begIndexForHourInfo - 30, 0), begIndexForHourInfo);
 			// checks date whether Date format like yyyy-MM-DD or DD-MM-yyyy
 			if (isDateContainsNumericYearDateFormat(pretextContainingInformation)) {
-				Matcher matcherForNumericYearDateFormat =DateExtractor.patternForNumericYearDateFormat
+				Matcher matcherForNumericYearDateFormat = DateExtractor.patternForNumericYearDateFormat
 						.matcher(pretextContainingInformation);
 				if (matcherForNumericYearDateFormat.find()) {
 					int start = matcherForNumericYearDateFormat.start();
@@ -847,11 +897,10 @@ public class ContentExtractor implements BaseArticleExractor {
 					textcontainingMonthDateInfo = pretextContainingInformation
 							.replaceFirst(yearFound.substring(0,
 									yearFound.length() - 1), "");
+				} else {
+					textcontainingMonthDateInfo = pretextContainingInformation;
 				}
-				else{
-					textcontainingMonthDateInfo=pretextContainingInformation;
-				}
-				Matcher mathcerForNumericDate =DateExtractor. patternForDateWithNonDigitCharactes
+				Matcher mathcerForNumericDate = DateExtractor.patternForDateWithNonDigitCharactes
 						.matcher(textcontainingMonthDateInfo);
 				if (mathcerForNumericDate.find()) {
 					int begDateInfo = mathcerForNumericDate.start();
@@ -871,15 +920,16 @@ public class ContentExtractor implements BaseArticleExractor {
 							String monthInfo = textcontainingMonthDateInfo
 									.substring(begIndexForMonth,
 											endIndexForMonthtemp);
-							numericMonth = DateExtractor.monthsdata.get(monthInfo.substring(
-									0, 3).toLowerCase());
+							numericMonth = DateExtractor.monthsdata
+									.get(monthInfo.substring(0, 3)
+											.toLowerCase());
 							endIndexForMonth = endIndexForMonthtemp;
 						}
 					}
 
 					String dateObject = defalutDate + "-" + numericMonth + "-"
 							+ numericYear + "~" + defaluthourMinutes + "~"
-							+ amPmInfo;
+							+ amPmInfo + "~" + defaultZone;
 					constructDateFromDateObject(dateObject, ampmInformation);
 				} else {
 					/*
@@ -894,12 +944,13 @@ public class ContentExtractor implements BaseArticleExractor {
 						endIndexForMonth = matcherForMonthName.end();
 						String monthName = pretextContainingInformation
 								.substring(begIndexForMonth, endIndexForMonth);
-						numericMonth =DateExtractor. monthsdata.get(monthName.toLowerCase());
+						numericMonth = DateExtractor.monthsdata.get(monthName
+								.toLowerCase());
 						String textBetweenMonthAndHours = pretextContainingInformation
 								.substring(endIndexForMonth,
 										begIndexForHourInfo);
 						// textBetweenMonthAndHours.
-						Matcher matcherForDate =DateExtractor. patternForDateWithNonDigitCharactes
+						Matcher matcherForDate = DateExtractor.patternForDateWithNonDigitCharactes
 								.matcher(textBetweenMonthAndHours);
 						if (matcherForDate.find()) {
 							begIndexForDate = matcherForDate.start();
@@ -927,7 +978,8 @@ public class ContentExtractor implements BaseArticleExractor {
 			}
 
 		} else if (isPageContainsCurrentYearInfo(htmlDocument)) {
-			Matcher matcherForYear =DateExtractor. patternforYearInDate.matcher(htmlDocument);
+			Matcher matcherForYear = DateExtractor.patternforYearInDate
+					.matcher(htmlDocument);
 			if (matcherForYear.find()) {
 				begIndexForYear = matcherForYear.start();
 				endIndexForYear = matcherForYear.end();
@@ -943,8 +995,8 @@ public class ContentExtractor implements BaseArticleExractor {
 					if (endIndexForMonth == 0) {
 						String monthInfo = textToBeSearched.substring(
 								begIndexForMonth, endIndexForMonthtemp);
-						numericMonth = DateExtractor.monthsdata.get(monthInfo.substring(0, 3)
-								.toLowerCase());
+						numericMonth = DateExtractor.monthsdata.get(monthInfo
+								.substring(0, 3).toLowerCase());
 						endIndexForMonth = endIndexForMonthtemp;
 						// once you identify month now look for date
 						String postTextMayContainDateInfo = textToBeSearched
@@ -954,7 +1006,7 @@ public class ContentExtractor implements BaseArticleExractor {
 						String pretextmayContainDateInfo = textToBeSearched
 								.substring(Math.max(begIndexForMonth - 5, 0),
 										begIndexForMonth);
-						Matcher matcherForDate =DateExtractor. patternForDateWithNonDigitCharactes
+						Matcher matcherForDate = DateExtractor.patternForDateWithNonDigitCharactes
 								.matcher(pretextmayContainDateInfo);
 						if (matcherForDate.find()) {
 							begIndexForDate = matcherForDate.start();
@@ -1000,7 +1052,8 @@ public class ContentExtractor implements BaseArticleExractor {
 			}
 		}
 		String dateObject = defalutDate + "-" + numericMonth + "-"
-				+ numericYear + "~" + defaluthourMinutes + "~" + amPmInfo;
+				+ numericYear + "~" + defaluthourMinutes + "~" + amPmInfo + "~"
+				+ defaultZone;
 		return constructDateFromDateObject(dateObject, ampmInformation);
 	}
 
@@ -1028,7 +1081,7 @@ public class ContentExtractor implements BaseArticleExractor {
 					+ hourInfo);
 			try {
 				dateTobeReturned = dateFormatter.parse(dataToBeConverted);
-				System.out.println(dateTobeReturned.toString());
+				// System.out.println(dateTobeReturned.toString());
 			} catch (ParseException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -1059,11 +1112,12 @@ public class ContentExtractor implements BaseArticleExractor {
 
 	private String getContentFromUrl(String url) {
 		StringBuilder sb = new StringBuilder(url);
+		InputStream ins = null;
 		String data = null;
 		try {
 			URL pagelink = new URL(url);
 			URLConnection urlconn = pagelink.openConnection();
-			InputStream ins = urlconn.getInputStream();
+			ins = urlconn.getInputStream();
 			BufferedReader br = new BufferedReader(new InputStreamReader(ins));
 
 			while ((data = br.readLine()) != null) {
@@ -1075,9 +1129,17 @@ public class ContentExtractor implements BaseArticleExractor {
 			e.printStackTrace();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
+		} finally {
+			try {
+				ins.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		return sb.toString();
 	}
+
 	public static boolean isDateContainsNumericYearDateFormat(String textData) {
 		Matcher matcherForNumericYearDate = DateExtractor.patternForNumericYearDateFormat
 				.matcher(textData);
