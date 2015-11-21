@@ -425,7 +425,7 @@ public class HTMLHighlighter {
           }
           html.append('<');
           html.append(qName);
-       // if(qName.equalsIgnoreCase("img"))  {
+       
           if (!ignoreAttrs) {
             final int numAtts = atts.getLength();
            for (int i = 0; i < numAtts; i++) {
@@ -437,19 +437,20 @@ public class HTMLHighlighter {
               }
 
               final String value = atts.getValue(i);
-              /*if(isContentBitSet)
+              String data = xmlEncode(value);
+              if(isContentBitSet&&(qName.equalsIgnoreCase("img")||qName.equalsIgnoreCase("a")||("style".equalsIgnoreCase(attr)&&(data != null && data.toLowerCase().contains("display:none")))))
               {
             	  targetHtml.append(' ');
             	  targetHtml.append(attr);
             	  targetHtml.append("=\"");
-            	  targetHtml.append(xmlEncode(value));
+            	  targetHtml.append(data);
             	  targetHtml.append("\"");
-              }*/
+              }
               
               html.append(' ');
               html.append(attr);
               html.append("=\"");
-              html.append(xmlEncode(value));
+              html.append(data);
               html.append("\"");
             }
           }
@@ -522,7 +523,9 @@ public class HTMLHighlighter {
         }
         if(highlight)
         {
-        	targetHtml.append(xmlEncode(String.valueOf(ch, start, length)));
+        String dataIntag =	xmlEncode(String.valueOf(ch, start, length));
+
+        	targetHtml.append(dataIntag);
         }
         html.append(xmlEncode(String.valueOf(ch, start, length)));
         if (highlight) {

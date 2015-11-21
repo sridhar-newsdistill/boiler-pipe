@@ -85,7 +85,10 @@ public class HTMLFetcher {
     in.close();
 
     final byte[] data = bos.toByteArray();
-
+    if(cs==null)
+    {
+    	cs=Charset.forName("UTF-8");
+    }
     return new HTMLDocument(data, cs);
   }
 }

@@ -38,41 +38,22 @@ import com.kohlschutter.boilerpipe.extractors.ArticleExtractor;
 import com.kohlschutter.boilerpipe.extractors.CommonExtractors;
 import com.kohlschutter.boilerpipe.sax.HTMLHighlighter;
 import com.newsdistill.articleextractor.utils.Utils;
+import static com.newsdistill.articleextractor.ApplicationConstants.*;
 
 public class ContentExtractor implements BaseArticleExractor {
-	static String titleTags = "h1|h2|h3|h4|title|.heading|#heading|meta[property=\"og:title\"]";
 	StringTokenizer titleTokens = new StringTokenizer(titleTags, "|");
-	static String encodingForLineBreaks = "1922135";
-	static String encodingForImageTags = "5312219";
-	static String noTagEncoding = "<5312219>";
-	static String regExToFindStartOfTheString = "^<[^>/]*>";
-	static String regExForEndOfTheTag = "^</[^>]*>";
-	static String delimiterBeforeOpenAndClosingTags = "<";
-	static String regexForImageExtraction = "<[\\s]*(IMG|img)[^>]*>";
-	static Pattern patternForStartTag = Pattern
-			.compile(regExToFindStartOfTheString);
-	static Pattern patternForImageExtraction = Pattern
-			.compile(regexForImageExtraction);
-	static Pattern patternForEndTag = Pattern.compile(regExForEndOfTheTag);
-	static Pattern patternForBeginningHtmlElement = Pattern
-			.compile(delimiterBeforeOpenAndClosingTags);
-	static String regExForimgExtraction = "<(h([1-5]+)|title)";
-	static Pattern patternForTitle = Pattern.compile(regExForimgExtraction);
-	// in case if we don't find title in these headers we will directly download
-	// from url
-	static String regexForTitleExtraction = "<(h1|h2|h3|title)[^>]*>";
-	static Pattern patternForTitleExtraction = Pattern.compile(
-			regexForTitleExtraction, Pattern.CASE_INSENSITIVE);
-	static String dateWhileListTags = ".(\\*date\\*|pub\\*|\\*info\\*|\\*time\\*|\\*calendar\\*)";
-	static String dateMetaTagInfo = "meta[property='((?i)(\\*date\\*|\\*Modified*))']";
-	static String regExofClassesForDateIdentificaion = "[class~=(?i)(.*Pub.*|.*date.*|.*info.*|.*time.*|.*calendar.*|.*post.*)]";
 
 	private ArticleContent contentIdentified = new ArticleContent();
 	private String Url;
 	private Charset cs = null;
 
+	public ContentExtractor() {
+		cs = Charset.forName("UTF-8");
+	}
+
 	public ContentExtractor(String url) {
 		this.Url = url;
+		cs = Charset.forName("UTF-8");
 	}
 
 	// idea try to create multile threads used exhisting
@@ -86,15 +67,17 @@ public class ContentExtractor implements BaseArticleExractor {
 					.getBytesFromURL(new URL(this.Url));
 			htmlBytes = (byte[]) resultMap.get("bytes");
 			this.cs = (Charset) resultMap.get("charset");
+			if (this.cs == null) {
+				this.cs = Charset.forName("UTF-8");
+			}
 		} catch (MalformedURLException e1) {
-			
+
 			e1.printStackTrace();
 		} catch (IOException e1) {
-			
+
 			e1.printStackTrace();
 		}
 
-		
 		String contentAvailableFrom = new String(htmlBytes);
 		contentIdentified.setUrl(this.Url);
 		contentIdentified.setDomain(getDomain());
@@ -129,26 +112,26 @@ public class ContentExtractor implements BaseArticleExractor {
 		if (htmldoc == null) {
 			return null;
 		}
-		while (titleTokens.hasMoreElements()) {
+		while (titleTokens.hasMoreElements() && doucmentTitle == null) {
 			String value = titleTokens.nextElement().toString();
 			Elements elements = htmldoc.select(value);
 			if (elements == null || elements.first() == null) {
 				continue;
-			}
-			else{
+			} else {
 				for (Element element : elements) {
-				  if(!StringUtils.isBlank(element.text())&&element.text().length()>15)
-				  {
-					  doucmentTitle = element.html();
-				  }
-				  else{
-					  continue;
-				  }
+					if (!StringUtils.isBlank(element.text())
+							&& element.text().length() > 15) {
+						doucmentTitle = element.html();
+						break;
+					} else {
+						continue;
+					}
 				}
+				break;
 			}
 
 		}
-		
+
 		return doucmentTitle;
 
 	}
@@ -162,7 +145,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		String resultFromBoilerPipe = "";
 		try {
 			resultFromBoilerPipe = contentHighlighter.process(url, ce);
-
+			// System.out.println("xxxxx boiler pipe " + resultFromBoilerPipe);
 		} catch (IOException e) {
 
 			e.printStackTrace();
@@ -175,11 +158,25 @@ public class ContentExtractor implements BaseArticleExractor {
 		}
 		resultFromBoilerPipe = "<html><head></head><body>"
 				+ resultFromBoilerPipe + "</body></html>";
-		resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>", "");
-		resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("</BR>",
-				encodingForLineBreaks);
 
-		return getCleanedDescription(resultFromBoilerPipe);
+		/*
+		 * try { resultFromBoilerPipe = contentHighlighter.process(url, ce,
+		 * resultFromBoilerPipe.getBytes(), this.cs);
+		 * System.out.println("second time processed o/p" +
+		 * resultFromBoilerPipe); } catch (IOException e) {
+		 * 
+		 * e.printStackTrace(); } catch (BoilerpipeProcessingException e) {
+		 * 
+		 * e.printStackTrace(); } catch (SAXException e) {
+		 * 
+		 * e.printStackTrace(); }
+		 */
+		/*
+		 * resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>",
+		 * encodingForLineBreaks); resultFromBoilerPipe =
+		 * resultFromBoilerPipe.replaceAll("</BR>", encodingForLineBreaks);
+		 */
+		return resultFromBoilerPipe; // getCleanedDescription(resultFromBoilerPipe);
 
 	}
 
@@ -191,7 +188,7 @@ public class ContentExtractor implements BaseArticleExractor {
 
 		String resultFromBoilerPipe = "";
 		try {
-			
+
 			resultFromBoilerPipe = contentHighlighter.process(url, ce,
 					contentInBytes, this.cs);
 
@@ -207,13 +204,28 @@ public class ContentExtractor implements BaseArticleExractor {
 		}
 		resultFromBoilerPipe = "<html><head></head><body>"
 				+ resultFromBoilerPipe + "</body></html>";
-		resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>", "");
-		resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("</BR>",
-				encodingForLineBreaks);
-
-		return getCleanedDescription(resultFromBoilerPipe);
+		/*
+		 * resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>",
+		 * encodingForLineBreaks); resultFromBoilerPipe =
+		 * resultFromBoilerPipe.replaceAll("</BR>", encodingForLineBreaks);
+		 */// getcleanDescriptionFromJsoup(resultFromBoilerPipe);
+		return resultFromBoilerPipe; // getCleanedDescription(resultFromBoilerPipe);
 	}
 
+	// get cleaned description :
+
+	// breadth first travel
+
+	/*
+	 * private String getcleanDescriptionFromJsoup(String boilerPipeData) {
+	 * boilerPipeData = boilerPipeData.replaceAll(REGEX_FOR_EMPTY_TAG_REMOVAL,
+	 * ""); Document doc = Jsoup.parse(boilerPipeData);
+	 * 
+	 * Elements elements = doc.children(); List<NodeInfo> list = new
+	 * ArrayList<>();
+	 * 
+	 * return null; }
+	 */
 	// cleans up the description
 	private String getCleanedDescription(String htmlString) {
 
@@ -224,6 +236,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		int begindex = 0;
 		int lengthOfString = htmlString.length();
 		String tagName = null;
+		String tagNameWithoutAttributes = null;
 		Matcher matcherForStart = patternForStartTag.matcher(htmlString);
 
 		while (absposition < lengthOfString - 4) {
@@ -237,6 +250,15 @@ public class ContentExtractor implements BaseArticleExractor {
 					int position = begindex = matcherForStart.start();
 					int endIndex = matcherForStart.end();
 					tagName = htmlString.substring(position, endIndex);
+					Matcher matcherForExactTagName = patternForFindingExactTagName
+							.matcher(tagName);
+					if (matcherForExactTagName.find()) {
+						String endTag = tagName.substring(
+								matcherForExactTagName.start(),
+								matcherForExactTagName.end());
+						tagNameWithoutAttributes = "</"
+								+ endTag.substring(1, endTag.length()) + ">";
+					}
 					tagnumber++;
 					htmlString = htmlString.substring(endIndex);
 					absposition = absposition + tagName.length();
@@ -249,16 +271,11 @@ public class ContentExtractor implements BaseArticleExractor {
 					int position = begindex = mathcerForEnd.start();
 
 					int endIndex = mathcerForEnd.end();
-					tagName = htmlString.substring(position, endIndex);
+					tagName = htmlString.substring(position, endIndex + 1);
 					absposition += tagName.length();
 					htmlString = htmlString.substring(endIndex);
 				}
-				/*
-				 * int pos = stack.getTop(); String lastTag =
-				 * stack.getTagInfo().get(pos); if (tagName.substring(2,
-				 * tagName.length() - 1) == lastTag .substring(1,
-				 * lastTag.length() - 1)) stack.pop();
-				 */
+
 			} else {
 				if (isBeginningOfTag(htmlString)) {
 					continue;
@@ -276,12 +293,14 @@ public class ContentExtractor implements BaseArticleExractor {
 					content = content.trim();
 					int numberofWordsInContent = Utils.getWordCount(content);
 					htmlString = htmlString.substring(endIndex);
-					content = tagName + content + "</"
-							+ tagName.substring(1, tagName.length());
-					numberedTagWithContent.put(tagName + "-" + tagnumber,
-							content);
-					tagWithWordCount.add(tagName + "-" + tagnumber + ":"
+					content = tagName + content + tagNameWithoutAttributes;
+
+					numberedTagWithContent.put(tagName + TAG_NAME_TAGNUM_DELIM
+							+ tagnumber, content);
+					tagWithWordCount.add(tagName + TAG_NAME_TAGNUM_DELIM
+							+ tagnumber + TAG_CONTENT_WORDCNT_DELIM
 							+ numberofWordsInContent);
+
 					absposition += endIndex;
 
 				}
@@ -419,7 +438,8 @@ public class ContentExtractor implements BaseArticleExractor {
 
 			if (loopSize <= sortedList.size()) {
 
-				String tagNameWithIndex = (string.split(":")[0]).trim();
+				String tagNameWithIndex = (string
+						.split(TAG_CONTENT_WORDCNT_DELIM)[0]).trim();
 
 				totalWordCount = totalWordCount
 
@@ -453,6 +473,7 @@ public class ContentExtractor implements BaseArticleExractor {
 				continue;
 			}
 			String content = text.trim().replaceAll("1922135", "</br>");
+			content = content.replaceAll("</br>[\\s]*<\br>", "1922135");
 			content = content.replaceAll(noTagEncoding, "");
 			content = content.replaceAll(
 					"</" + noTagEncoding.substring(1, noTagEncoding.length()),
