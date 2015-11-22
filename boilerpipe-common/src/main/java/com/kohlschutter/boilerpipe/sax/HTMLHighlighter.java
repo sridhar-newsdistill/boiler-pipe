@@ -25,10 +25,10 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.xerces.parsers.AbstractSAXParser;
+import org.cyberneko.html.HTMLConfiguration;
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.InputSource;
@@ -39,8 +39,6 @@ import com.kohlschutter.boilerpipe.BoilerpipeExtractor;
 import com.kohlschutter.boilerpipe.BoilerpipeProcessingException;
 import com.kohlschutter.boilerpipe.document.TextBlock;
 import com.kohlschutter.boilerpipe.document.TextDocument;
-
-import org.cyberneko.html.HTMLConfiguration;
 
 /**
  * Highlights text blocks in an HTML document that have been marked as "content" in the
@@ -108,7 +106,7 @@ public class HTMLHighlighter {
     implementation.process(doc, is);
     
    // document=doc;
-    String html = implementation.html.toString();
+/*    String html = implementation.html.toString();
     if (outputHighlightOnly) {
       Matcher m;
 
@@ -128,15 +126,15 @@ public class HTMLHighlighter {
         }
       }
     }
-
-    return html;
+*/
+    return null;
   }
   public String processTargetHtml(final TextDocument doc, final InputSource is)throws BoilerpipeProcessingException
   {
 	  final Implementation implementation = new Implementation();
 	    implementation.process(doc, is);
 	    String html = implementation.targetHtml.toString();
-	    actualContent=implementation.html.toString();
+	    //actualContent=implementation.html.toString();
 	    return html;
   }
   
@@ -423,8 +421,8 @@ public class HTMLHighlighter {
         	  targetHtml.append('<');
         	  targetHtml.append(qName);
           }
-          html.append('<');
-          html.append(qName);
+          /*html.append('<');
+          html.append(qName);*/
        
           if (!ignoreAttrs) {
             final int numAtts = atts.getLength();
@@ -447,11 +445,11 @@ public class HTMLHighlighter {
             	  targetHtml.append("\"");
               }
               
-              html.append(' ');
+              /*html.append(' ');
               html.append(attr);
               html.append("=\"");
               html.append(data);
-              html.append("\"");
+              html.append("\"");*/
             }
           }
           
@@ -459,7 +457,7 @@ public class HTMLHighlighter {
           {
         	  targetHtml.append('>');
           }
-          html.append('>');
+          /*html.append('>');*/
         }
       } finally {
         if (ta != null) {
@@ -496,10 +494,10 @@ public class HTMLHighlighter {
         	  targetHtml.append(qName);
         	  targetHtml.append('>');
           }
-
+/*
           html.append("</");
           html.append(qName);
-          html.append('>');
+          html.append('>');*/
         }
       } finally {
         if (ta != null) {
@@ -518,19 +516,19 @@ public class HTMLHighlighter {
           return;
         }
 
-        if (highlight) {
+       /* if (highlight) {
           html.append(preHighlight);
-        }
+        }*/
         if(highlight)
         {
         String dataIntag =	xmlEncode(String.valueOf(ch, start, length));
 
         	targetHtml.append(dataIntag);
         }
-        html.append(xmlEncode(String.valueOf(ch, start, length)));
-        if (highlight) {
+        //html.append(xmlEncode(String.valueOf(ch, start, length)));
+        /*if (highlight) {
           html.append(postHighlight);
-        }
+        }*/
       }
     }
 

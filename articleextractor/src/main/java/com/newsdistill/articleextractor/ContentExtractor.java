@@ -56,7 +56,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		cs = Charset.forName("UTF-8");
 	}
 
-	// idea try to create multile threads used exhisting
+	// 1idea try to create multile threads used exhisting
 	@Override
 	public ArticleContent getTotoalContent() {
 		URL pagelink = null;
@@ -145,7 +145,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		String resultFromBoilerPipe = "";
 		try {
 			resultFromBoilerPipe = contentHighlighter.process(url, ce);
-			// System.out.println("xxxxx boiler pipe " + resultFromBoilerPipe);
+			
 		} catch (IOException e) {
 
 			e.printStackTrace();
@@ -159,25 +159,9 @@ public class ContentExtractor implements BaseArticleExractor {
 		resultFromBoilerPipe = "<html><head></head><body>"
 				+ resultFromBoilerPipe + "</body></html>";
 
-		/*
-		 * try { resultFromBoilerPipe = contentHighlighter.process(url, ce,
-		 * resultFromBoilerPipe.getBytes(), this.cs);
-		 * System.out.println("second time processed o/p" +
-		 * resultFromBoilerPipe); } catch (IOException e) {
-		 * 
-		 * e.printStackTrace(); } catch (BoilerpipeProcessingException e) {
-		 * 
-		 * e.printStackTrace(); } catch (SAXException e) {
-		 * 
-		 * e.printStackTrace(); }
-		 */
-		/*
-		 * resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>",
-		 * encodingForLineBreaks); resultFromBoilerPipe =
-		 * resultFromBoilerPipe.replaceAll("</BR>", encodingForLineBreaks);
-		 */
+		resultFromBoilerPipe.replaceFirst("(display:none)(;)?", "");
+		
 		return resultFromBoilerPipe; // getCleanedDescription(resultFromBoilerPipe);
-
 	}
 
 	public String getDescription(URL url, byte[] contentInBytes) {
