@@ -135,6 +135,7 @@ public class HTMLHighlighter {
 	    implementation.process(doc, is);
 	    String html = implementation.targetHtml.toString();
 	    //actualContent=implementation.html.toString();
+	    document=null;
 	    return html;
   }
   
@@ -167,7 +168,7 @@ public class HTMLHighlighter {
 
     return processTargetHtml(doc, is);
   }
-  public String process (final URL url, final BoilerpipeExtractor extractor,byte[] content,Charset cs )throws IOException,BoilerpipeProcessingException, SAXException
+  public String process (final BoilerpipeExtractor extractor,byte[] content,Charset cs )throws IOException,BoilerpipeProcessingException, SAXException
   {
 	  final HTMLDocument htmlDoc= new HTMLDocument(content, cs);
 	  final TextDocument doc = new BoilerpipeSAXInput(htmlDoc.toInputSource()).getTextDocument();
@@ -274,7 +275,7 @@ public class HTMLHighlighter {
     void beforeStart(final Implementation instance, final String localName) {
     }
 
-    void afterStart(final Implementation instance, final String localName) {
+    void afterStart(final Implementation instance,  String localName) {
     }
 
     void beforeEnd(final Implementation instance, final String localName) {
@@ -381,6 +382,7 @@ public class HTMLHighlighter {
       if (ta != null) {
         ta.beforeStart(this, localName);
       }
+      qName = qName.toLowerCase();
 
       // HACK: remove existing highlight
       boolean ignoreAttrs = false;
@@ -419,7 +421,8 @@ public class HTMLHighlighter {
           if(isContentBitSet)
           {
         	  targetHtml.append('<');
-        	  targetHtml.append(qName);
+        	  
+        	  targetHtml.append(qName); 
           }
           /*html.append('<');
           html.append(qName);*/
@@ -436,7 +439,7 @@ public class HTMLHighlighter {
 
               final String value = atts.getValue(i);
               String data = xmlEncode(value);
-              if(isContentBitSet&&(qName.equalsIgnoreCase("img")||qName.equalsIgnoreCase("a")||("style".equalsIgnoreCase(attr)&&(data != null && data.toLowerCase().contains("display:none")))))
+              if(isContentBitSet)
               {
             	  targetHtml.append(' ');
             	  targetHtml.append(attr);
@@ -461,15 +464,17 @@ public class HTMLHighlighter {
         }
       } finally {
         if (ta != null) {
-          ta.afterStart(this, localName);
+          ta.afterStart(this, localName.toLowerCase());
         }
       }
     }
 
     public void endElement(String uri, String localName, String qName) throws SAXException {
+    	
+    	qName =	qName.toLowerCase();
       TagAction ta = TAG_ACTIONS.get(localName);
       if (ta != null) {
-        ta.beforeEnd(this, localName);
+        ta.beforeEnd(this, localName.toLowerCase());
       }
 
       try {
@@ -492,7 +497,7 @@ public class HTMLHighlighter {
           {
         	  targetHtml.append("</");
         	  targetHtml.append(qName);
-        	  targetHtml.append('>');
+        	  targetHtml.append(">");
           }
 /*
           html.append("</");
