@@ -1187,7 +1187,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		return contentIdentified;
 	}
 
-	private String getImage(byte[] htmlInBytes, Charset cs) {
+	public String getImage(byte[] htmlInBytes, Charset cs) {
 		ArticleExtractor ce = null;
 		ce = CommonExtractors.ARTICLE_EXTRACTOR;
 		HTMLDocument htmlDoc = new HTMLDocument(htmlInBytes, cs);

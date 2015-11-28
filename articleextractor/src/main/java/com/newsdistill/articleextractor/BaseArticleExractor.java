@@ -1,6 +1,7 @@
 package com.newsdistill.articleextractor;
 
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.Date;
 
 public interface BaseArticleExractor {
@@ -9,7 +10,7 @@ public interface BaseArticleExractor {
     public String getTitle(String url);
     public String getDescription(URL url);
     public String getDescription(URL url,byte[] content);
-
+    public String getImage(byte[] htmlInBytes, Charset cs);
     public Date getDate(String content);
     public String getImage(String conent);
     public String getLogo();
