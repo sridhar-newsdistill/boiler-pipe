@@ -5,6 +5,7 @@ import java.util.Date;
 
 public interface BaseArticleExractor {
 	public ArticleContent getTotoalContent();
+	public ArticleContent getTotalContent(int imageLookupCode);
     public String getTitle(String url);
     public String getDescription(URL url);
     public String getDescription(URL url,byte[] content);

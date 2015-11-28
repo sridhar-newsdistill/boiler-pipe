@@ -16,11 +16,14 @@ public class TagMetaData {
 	boolean isPartOfDescription;
 
 	public TagMetaData(String metadata) {
-		wordCount = Integer.parseInt((metadata.split(":")[1]).trim());
-		tagNameWithIndex = (metadata.split(":")[0]).trim();
-		tagName = ((metadata.split(":")[0]).split("-")[0]).trim();
-		tagCount = Integer.parseInt(((metadata.split(":")[0]).split("-")[1])
-				.trim());
+		wordCount = Integer.parseInt((metadata.split(ApplicationConstants.TAG_CONTENT_WORDCNT_DELIM)[1]).trim());
+		tagNameWithIndex = (metadata.split(ApplicationConstants.TAG_CONTENT_WORDCNT_DELIM)[0]).trim();
+		String tagArray[] = tagNameWithIndex.split(ApplicationConstants.TAG_NAME_TAGNUM_DELIM);
+		System.out.println(tagArray[0]);
+		System.out.println(tagArray[1]);
+		          
+		//tagName = ((metadata.split(ApplicationConstants.TAG_CONTENT_WORDCNT_DELIM)[0]).split(ApplicationConstants.TAG_NAME_TAGNUM_DELIM)[0]).trim();
+		tagCount = Integer.parseInt(((tagNameWithIndex.split(ApplicationConstants.TAG_NAME_TAGNUM_DELIM)[1]).trim()));
 
 	}
 

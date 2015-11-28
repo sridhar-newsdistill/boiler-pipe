@@ -31,13 +31,20 @@ import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import com.kohlschutter.boilerpipe.BoilerpipeProcessingException;
+import com.kohlschutter.boilerpipe.document.Image;
+import com.kohlschutter.boilerpipe.document.TextDocument;
 import com.kohlschutter.boilerpipe.extractors.ArticleExtractor;
 import com.kohlschutter.boilerpipe.extractors.CommonExtractors;
+import com.kohlschutter.boilerpipe.sax.BoilerpipeSAXInput;
+import com.kohlschutter.boilerpipe.sax.HTMLDocument;
 import com.kohlschutter.boilerpipe.sax.HTMLHighlighter;
+import com.kohlschutter.boilerpipe.sax.ImageExtractor;
 import com.newsdistill.articleextractor.utils.Utils;
+
 import static com.newsdistill.articleextractor.ApplicationConstants.*;
 
 public class ContentExtractor implements BaseArticleExractor {
@@ -56,10 +63,9 @@ public class ContentExtractor implements BaseArticleExractor {
 		cs = Charset.forName("UTF-8");
 	}
 
-	// 1idea try to create multile threads used exhisting
 	@Override
 	public ArticleContent getTotoalContent() {
-		URL pagelink = null;
+		// URL pagelink = null;
 		byte[] htmlBytes = null;
 
 		try {
@@ -94,8 +100,6 @@ public class ContentExtractor implements BaseArticleExractor {
 			arrayIndexRange.printStackTrace();
 		}
 
-		// should spawn 4 thereads
-		// ExecutorService es = Executors.newFixedThreadPool(4);
 		contentIdentified.setArticleDate(getDate(contentAvailableFrom));
 
 		return contentIdentified;
@@ -145,7 +149,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		String resultFromBoilerPipe = "";
 		try {
 			resultFromBoilerPipe = contentHighlighter.process(url, ce);
-			
+
 		} catch (IOException e) {
 
 			e.printStackTrace();
@@ -160,8 +164,8 @@ public class ContentExtractor implements BaseArticleExractor {
 				+ resultFromBoilerPipe + "</body></html>";
 
 		resultFromBoilerPipe.replaceFirst("(display:none)(;)?", "");
-		
-		return resultFromBoilerPipe; // getCleanedDescription(resultFromBoilerPipe);
+
+		return resultFromBoilerPipe;
 	}
 
 	public String getDescription(URL url, byte[] contentInBytes) {
@@ -173,7 +177,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		String resultFromBoilerPipe = "";
 		try {
 
-			resultFromBoilerPipe = contentHighlighter.process(url, ce,
+			resultFromBoilerPipe = contentHighlighter.process(ce,
 					contentInBytes, this.cs);
 
 		} catch (IOException e) {
@@ -188,29 +192,10 @@ public class ContentExtractor implements BaseArticleExractor {
 		}
 		resultFromBoilerPipe = "<html><head></head><body>"
 				+ resultFromBoilerPipe + "</body></html>";
-		/*
-		 * resultFromBoilerPipe = resultFromBoilerPipe.replaceAll("<BR>",
-		 * encodingForLineBreaks); resultFromBoilerPipe =
-		 * resultFromBoilerPipe.replaceAll("</BR>", encodingForLineBreaks);
-		 */// getcleanDescriptionFromJsoup(resultFromBoilerPipe);
-		return resultFromBoilerPipe; // getCleanedDescription(resultFromBoilerPipe);
+
+		return resultFromBoilerPipe;
 	}
 
-	// get cleaned description :
-
-	// breadth first travel
-
-	/*
-	 * private String getcleanDescriptionFromJsoup(String boilerPipeData) {
-	 * boilerPipeData = boilerPipeData.replaceAll(REGEX_FOR_EMPTY_TAG_REMOVAL,
-	 * ""); Document doc = Jsoup.parse(boilerPipeData);
-	 * 
-	 * Elements elements = doc.children(); List<NodeInfo> list = new
-	 * ArrayList<>();
-	 * 
-	 * return null; }
-	 */
-	// cleans up the description
 	private String getCleanedDescription(String htmlString) {
 
 		Map<String, String> numberedTagWithContent = new LinkedHashMap<String, String>();
@@ -298,7 +283,6 @@ public class ContentExtractor implements BaseArticleExractor {
 	@Override
 	public Date getDate(String content) {
 
-		// content = "<html><head></head><body>" + content + "</body></html>";
 		Document doc = Jsoup.parse(content);
 
 		return getFinalDate(doc);
@@ -310,12 +294,10 @@ public class ContentExtractor implements BaseArticleExractor {
 
 	@Override
 	public String getImage(String conent) {
-		// TODO Auto-generated method stub
 
 		Document doc = null;
 		Elements nodes = null;
 		String imageUrl = null;
-		// Connection connection = Jsoup.connect(url);
 		doc = Jsoup.parse(conent);
 		String imagePattern = "meta[property=og:image]|img[src]|img[data*]";
 		StringTokenizer st = new StringTokenizer(imagePattern, "|");
@@ -323,7 +305,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		while (st.hasMoreElements()) {
 
 			nodes = doc.select(st.nextElement().toString());
-			// System.out.println(nodes);
+
 			if (nodes == null) {
 				System.out.println("caught up here");
 				continue;
@@ -334,8 +316,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			if (imageTag != null) {
 				if (imageTag.tagName().equalsIgnoreCase("meta")) {
 					imageUrl = imageTag.attr("content");
-					// System.out.println("image");
-					// System.out.println(imageUrl);
+
 				}
 
 				break;
@@ -650,39 +631,61 @@ public class ContentExtractor implements BaseArticleExractor {
 		Elements allSelectedElements = elems.clone();
 		allSelectedElements = allSelectedElements
 				.select(DateExtractor.regexForSelectiontags);
-		for (Element e : allSelectedElements) {
+		if (allSelectedElements != null && allSelectedElements.size() > 0) {
+			for (Element e : allSelectedElements) {
 
-			if (e.text().toLowerCase().contains("2015")
-					&& e.text().length() < 100) {
-				dateCountMap(mapForDate, e.text());
+				if (e.text().toLowerCase().contains("2015")
+						&& e.text().length() < 100) {
+					dateCountMap(mapForDate, e.text());
+				}
 			}
 		}
-		for (Element block : elems) {
-			Attributes node = block.attributes();
-			Iterator<Attribute> it = node.iterator();
-			while (it.hasNext()) {
+		if (mapForDate.size() == 0 && elems != null && elems.size() > 0) {
+			for (Element block : elems) {
+				Attributes node = block.attributes();
+				Iterator<Attribute> it = node.iterator();
+				while (it.hasNext()) {
+					Attribute attr = it.next();
+					String val = attr.getValue();
+					val = val.toLowerCase();
+					Matcher matcher = DateExtractor.patternval.matcher(val);
 
-				// Pattern patternval = Pattern.compile(dateWhileListTags);
-				Attribute attr = it.next();
-				String val = attr.getValue();
-				val = val.toLowerCase();
-				Matcher matcher = DateExtractor.patternval.matcher(val);
+					if ((matcher.find() || !StringUtils.isEmpty(val))
+							&& (val.toLowerCase().contains("date") || val
+									.toLowerCase().contains("modified"))) {
+						String probableDate = block.attr("content");
+						if (!StringUtils.isEmpty(probableDate)
+								&& (probableDate.toLowerCase().contains("2015") && probableDate
+										.length() < 100)) {
 
-				if ((matcher.find() || !StringUtils.isEmpty(val))
-						&& (val.toLowerCase().contains("date") || val
-								.toLowerCase().contains("modified"))) {
-					String probableDate = block.attr("content");
-					if (!StringUtils.isEmpty(probableDate)
-							&& (probableDate.toLowerCase().contains("2015") && probableDate
+							dateCountMap(mapForDate, probableDate);
+							// break;
+						}
+					}
+
+				}
+			}
+		}
+		if (mapForDate.size() == 0) {
+			elems.select("a,meta,script").remove();
+			for (Element element : allSelectedElements) {
+
+				String textFromElement = element.text();
+
+				if (element.text().length() > 10
+						&& element.text().length() < 50) {
+					if (!StringUtils.isEmpty(textFromElement)
+							&& (textFromElement.toLowerCase().contains("2015") && textFromElement
 									.length() < 100)) {
 
-						dateCountMap(mapForDate, probableDate);
+						dateCountMap(mapForDate, textFromElement);
 						// break;
 					}
 				}
-
 			}
+
 		}
+
 		List<Date> datesidentified = new ArrayList<Date>();
 		Set<String> dates = mapForDate.keySet();
 		if (dates.size() <= 0) {
@@ -721,10 +724,6 @@ public class ContentExtractor implements BaseArticleExractor {
 		Collections.sort(datesidentified);
 
 		Collections.reverse(datesidentified);
-		/*
-		 * for (Date dateobj : datesidentified) {
-		 * System.out.println(dateobj.toString()); }
-		 */
 
 		while (!isValidDate(datesidentified.get(dateindex))) {
 
@@ -733,8 +732,6 @@ public class ContentExtractor implements BaseArticleExractor {
 
 		return datesidentified.get(dateindex);
 	}
-
-	// counts number of times each date format type appeared
 
 	private static boolean isValidDate(Date dateToBeChecked) {
 		Calendar calendar = Calendar.getInstance();
@@ -784,7 +781,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		numericMonth = cal.get(Calendar.MONTH) + 1;
 
 		numericDate = cal.get(Calendar.DATE);
-		String defaultZone = "";
+		String defaultZone = "UTC";
 		String defalutyear = numericYear.toString();
 		String defalutDate = numericDate.toString().length() == 1 ? ("0" + numericDate
 				.toString()) : numericDate.toString();
@@ -937,11 +934,7 @@ public class ContentExtractor implements BaseArticleExractor {
 							+ amPmInfo + "~" + defaultZone;
 					constructDateFromDateObject(dateObject, ampmInformation);
 				} else {
-					/*
-					 * pretextContainingInformation =
-					 * pretextContainingInformation .replaceFirst(defalutyear,
-					 * "");
-					 */
+
 					Matcher matcherForMonthName = DateExtractor.patternForMonthName
 							.matcher(pretextContainingInformation);
 					if (matcherForMonthName.find()) {
@@ -1084,11 +1077,12 @@ public class ContentExtractor implements BaseArticleExractor {
 			}
 			SimpleDateFormat dateFormatter = new SimpleDateFormat(dateFormat
 					+ hourInfo);
+			dateFormatter.setTimeZone(TimeZone.getTimeZone(datevalue[3]));
 			try {
 				dateTobeReturned = dateFormatter.parse(dataToBeConverted);
-				// System.out.println(dateTobeReturned.toString());
+
 			} catch (ParseException e) {
-				// TODO Auto-generated catch block
+
 				e.printStackTrace();
 			}
 
@@ -1130,7 +1124,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			}
 
 		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
+
 			e.printStackTrace();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
@@ -1138,7 +1132,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			try {
 				ins.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+
 				e.printStackTrace();
 			}
 		}
@@ -1149,6 +1143,77 @@ public class ContentExtractor implements BaseArticleExractor {
 		Matcher matcherForNumericYearDate = DateExtractor.patternForNumericYearDateFormat
 				.matcher(textData);
 		return matcherForNumericYearDate.find();
+	}
+
+	@Override
+	public ArticleContent getTotalContent(int imageLookupCode) {
+
+		byte[] htmlBytes = null;
+
+		try {
+			Map<String, Object> resultMap = HTMLFetcherUtil
+					.getBytesFromURL(new URL(this.Url));
+			htmlBytes = (byte[]) resultMap.get("bytes");
+			this.cs = (Charset) resultMap.get("charset");
+			if (this.cs == null) {
+				this.cs = Charset.forName("UTF-8");
+			}
+		} catch (MalformedURLException e1) {
+
+			e1.printStackTrace();
+		} catch (IOException e1) {
+
+			e1.printStackTrace();
+		}
+		String contentAvailableFrom = new String(htmlBytes);
+		contentIdentified.setUrl(this.Url);
+		contentIdentified.setDomain(getDomain());
+		contentIdentified.setTitle(getTitle(contentAvailableFrom));
+		contentIdentified.setArticleDate(getDate(contentAvailableFrom));
+		if (imageLookupCode < 3) {
+			contentIdentified.setImageUrl(getImage(contentAvailableFrom));
+		} else {
+			contentIdentified.setImageUrl(getImage(htmlBytes, this.cs));
+		}
+		try {
+			contentIdentified.setDescription(getDescription(new URL(this.Url),
+					htmlBytes));
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IndexOutOfBoundsException arrayIndexRange) {
+			arrayIndexRange.printStackTrace();
+		}
+		contentIdentified.setArticleDate(getDate(contentAvailableFrom));
+		return contentIdentified;
+	}
+
+	private String getImage(byte[] htmlInBytes, Charset cs) {
+		ArticleExtractor ce = null;
+		ce = CommonExtractors.ARTICLE_EXTRACTOR;
+		HTMLDocument htmlDoc = new HTMLDocument(htmlInBytes, cs);
+		InputSource inps = htmlDoc.toInputSource();
+		List<Image> imagesIdentifeid = null;
+		TextDocument doc = null;
+		;
+		try {
+			doc = new BoilerpipeSAXInput(htmlDoc.toInputSource())
+					.getTextDocument();
+			ce.process(doc);
+			final ImageExtractor ie = ImageExtractor.INSTANCE;
+			imagesIdentifeid = ie.process(doc, inps);
+
+		} catch (BoilerpipeProcessingException e) {
+			e.printStackTrace();
+		} catch (SAXException e) {
+
+			e.printStackTrace();
+		}
+		if (imagesIdentifeid != null && imagesIdentifeid.size() > 0) {
+			Collections.sort(imagesIdentifeid);
+			return imagesIdentifeid.get(0).getSrc();
+		} else {
+			return null;
+		}
 	}
 
 }
