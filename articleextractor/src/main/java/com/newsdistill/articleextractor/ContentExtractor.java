@@ -204,7 +204,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		List<String> tagWithWordCount = new ArrayList<String>();
 		int absposition = 0;
 		int tagnumber = 0;
-		int begindex = 0;
+		//int begindex = 0;
 		int lengthOfString = htmlString.length();
 		String tagName = null;
 		String tagNameWithoutAttributes = null;
@@ -218,7 +218,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			Matcher mathcerForEnd = patternForEndTag.matcher(htmlString);
 			if (isBeginningOfTag(startString)) {
 				if (matcherForStart.find()) {
-					int position = begindex = matcherForStart.start();
+					int position  = matcherForStart.start();
 					int endIndex = matcherForStart.end();
 					tagName = htmlString.substring(position, endIndex);
 					Matcher matcherForExactTagName = patternForFindingExactTagName
@@ -239,7 +239,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			if (isEndofTheTag(htmlString)) {
 				if (mathcerForEnd.find()) {
 
-					int position = begindex = mathcerForEnd.start();
+					int position = mathcerForEnd.start();
 
 					int endIndex = mathcerForEnd.end();
 					tagName = htmlString.substring(position, endIndex + 1);
