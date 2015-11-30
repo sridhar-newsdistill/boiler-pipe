@@ -817,7 +817,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		numericMonth = cal.get(Calendar.MONTH) + 1;
 
 		numericDate = cal.get(Calendar.DATE);
-		String defaultZone = zone;
+		String defaultZone =  StringUtils.isBlank(zone)?"UTC":zone;
 		String defalutyear = numericYear.toString();
 		String defalutDate = numericDate.toString().length() == 1 ? ("0" + numericDate
 				.toString()) : numericDate.toString();
