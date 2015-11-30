@@ -13,21 +13,14 @@ public class Driver {
 
 	public static void main(String[] args) throws IOException {
 		long start = System.currentTimeMillis();
-		/*
-		 * Map<String, Object> data = HTMLFetcherUtil .getBytesFromURL(new URL(
-		 * "http://www.thehindu.com/news/national/india-first-only-religion-of-government-and-constitution-its-only-scripture-says-modi/article7923917.ece?homepage=true"
-		 * ));
-		 */BaseArticleExractor article = new ContentExtractor(
-				"http://www.livemint.com/Politics/zA1uOWlVK6hjDt5BAmLO0H/Colorado-shooting-3-killed-9-injured-in-attack-on-family-p.html");
-		/*
-		 * //String refineddesc=article.getDescription();
-		 * 
-		 * byte urlBytes[] = (byte[])data.get("bytes");
-		 * System.out.println(article.getDate(urlBytes.toString()));
-		 */
-		ArticleContent ac = article.getTotalContent(4);
+		
+	BaseArticleExractor article = new ContentExtractor(
+				"http://www.apherald.com/Politics/ViewArticle/105615/ys-jagan-chandrababu-media-opposition-same-dialogu/");
+		
+		ArticleContent ac = article.getTotalContent(3,"IST");
 		System.out.println(ac.getArticleDate());
 		System.out.println(ac.getImageUrl());
+		System.out.println(ac.getDescription());
 
 		long end = System.currentTimeMillis();
 		System.out.println(end - start);
