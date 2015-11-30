@@ -1170,12 +1170,12 @@ public class ContentExtractor implements BaseArticleExractor {
 	public String getImage(byte[] htmlInBytes, Charset cs) {
 		ArticleExtractor ce = null;
 		ce = CommonExtractors.ARTICLE_EXTRACTOR;
-		String imageToBeReturned = null;
+		//String imageToBeReturned = null;
 		HTMLDocument htmlDoc = new HTMLDocument(htmlInBytes, cs);
 		InputSource inps = htmlDoc.toInputSource();
 		List<Image> imagesIdentifeid = null;
 		TextDocument doc = null;
-		;
+		
 		try {
 			doc = new BoilerpipeSAXInput(htmlDoc.toInputSource())
 					.getTextDocument();
