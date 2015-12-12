@@ -35,6 +35,9 @@ public class ApplicationConstants {
 	public static final String regExofClassesForDateIdentificaion = "[class~=(?i)(.*Pub.*|.*date.*|.*info.*|.*time.*|.*calendar.*|.*post.*)]";
 	public static final String REGEX_FOR_HEADINGTAGS = "<(?i)H[1-5][^>]*>[^<]*<[/](?i)H[1-5][^>]*>";
 	public static String DESCRIPTION_HTML_TAGS_WHITELIST = "p,br,h1,h2,h3,h4,h5,h6,font";
-
+	//genreally image lies within src attibute in case if its not available in src then we are looking for attibutes starts with data-* 
+    public static String REG_FOR_IMGEDATA_ATTR="(?i)(src|data[^=]*)";
+    public static Pattern PATTERN_FOR_ATTR_DATA = Pattern.compile(REG_FOR_IMGEDATA_ATTR);
+	
 
 }

@@ -9,6 +9,7 @@ import static com.newsdistill.articleextractor.ApplicationConstants.patternForFi
 import static com.newsdistill.articleextractor.ApplicationConstants.patternForStartTag;
 import static com.newsdistill.articleextractor.ApplicationConstants.titleTags;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -21,13 +22,16 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
@@ -36,21 +40,16 @@ import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import com.kohlschutter.boilerpipe.BoilerpipeProcessingException;
-import com.kohlschutter.boilerpipe.document.Image;
-import com.kohlschutter.boilerpipe.document.TextDocument;
 import com.kohlschutter.boilerpipe.extractors.ArticleExtractor;
 import com.kohlschutter.boilerpipe.extractors.CommonExtractors;
-import com.kohlschutter.boilerpipe.sax.BoilerpipeSAXInput;
-import com.kohlschutter.boilerpipe.sax.HTMLDocument;
 import com.kohlschutter.boilerpipe.sax.HTMLHighlighter;
-import com.kohlschutter.boilerpipe.sax.ImageExtractor;
 import com.newsdistill.articleextractor.utils.Utils;
 
 public class ContentExtractor implements BaseArticleExractor {
+	Logger log = Logger.getLogger(ContentExtractor.class.getName());
 	StringTokenizer titleTokens = new StringTokenizer(titleTags, "|");
 
 	private ArticleContent contentIdentified = new ArticleContent();
@@ -80,10 +79,12 @@ public class ContentExtractor implements BaseArticleExractor {
 				this.cs = Charset.forName("UTF-8");
 			}
 		} catch (MalformedURLException e1) {
-
+			this.log.info("error messaage " + e1.getMessage() + " Cause "
+					+ e1.getCause() + " stack trace" + e1.getStackTrace());
 			e1.printStackTrace();
 		} catch (IOException e1) {
-
+			this.log.info("error messaage " + e1.getMessage() + " Cause "
+					+ e1.getCause() + " stack trace" + e1.getStackTrace());
 			e1.printStackTrace();
 		}
 
@@ -92,7 +93,6 @@ public class ContentExtractor implements BaseArticleExractor {
 		contentIdentified.setDomain(getDomain());
 		contentIdentified.setImageUrl(getImage(contentAvailableFrom));
 		contentIdentified.setTitle(getTitle(contentAvailableFrom));
-
 		try {
 			contentIdentified.setDescription(getDescription(new URL(this.Url),
 					htmlBytes));
@@ -137,33 +137,27 @@ public class ContentExtractor implements BaseArticleExractor {
 			}
 
 		}
-
 		return doucmentTitle;
 
 	}
 
 	public String getDescription(URL url) {
-		ArticleExtractor ce = null;
-		ce = CommonExtractors.ARTICLE_EXTRACTOR;
-		final HTMLHighlighter contentHighlighter = HTMLHighlighter
-				.newHighlightingInstance();
-
+		byte[] htmlBytes = null;
 		String resultFromBoilerPipe = "";
 		try {
-			resultFromBoilerPipe = contentHighlighter.process(url, ce);
+			Map<String, Object> resultMap = HTMLFetcherUtil
+					.getBytesFromURL(new URL(this.Url));
+			htmlBytes = (byte[]) resultMap.get("bytes");
+			this.cs = (Charset) resultMap.get("charset");
+			if (this.cs == null) {
+				this.cs = Charset.forName("UTF-8");
+			}
 
+			resultFromBoilerPipe = getDescription(new URL(this.Url), htmlBytes); // contentHighlighter.process(url,
 		} catch (IOException e) {
 
 			e.printStackTrace();
-		} catch (BoilerpipeProcessingException e) {
-
-			e.printStackTrace();
-		} catch (SAXException e) {
-
-			e.printStackTrace();
 		}
-		resultFromBoilerPipe = "<html><head></head><body>"
-				+ resultFromBoilerPipe + "</body></html>";
 
 		resultFromBoilerPipe.replaceFirst("(display:none)(;)?", "");
 
@@ -173,10 +167,40 @@ public class ContentExtractor implements BaseArticleExractor {
 	public String getDescription(URL url, byte[] contentInBytes) {
 		ArticleExtractor ce = null;
 		ce = CommonExtractors.ARTICLE_EXTRACTOR;
+		String classForRemoval = "nd_boiler_pipe_tag";
 		final HTMLHighlighter contentHighlighter = HTMLHighlighter
 				.newHighlightingInstance();
+		String htmlDocument = new String(contentInBytes);
+		Document doc = Jsoup.parse(htmlDocument);
 
+		doc.select("script").remove();
+		// doc.select("li a").remove();
+		doc.select("head").remove();
+		// doc.select("a>img").remove();
+		doc.select("input").remove();
+
+		// doc.select("").remove();
+		// Elements doumentElemtns = doc.getAllElements();
+
+		Elements elems = doc.select("a>span");
+		for (Element element : elems) {
+			if (element.text().length() < 20) {
+
+				element.addClass(classForRemoval);
+				String textOrHtmldata = element.html();
+				if (textOrHtmldata.matches("[\\s]*<[.]*")) {
+					Element parentElement = element.parent();
+					classForRemoval = "." + classForRemoval;
+					parentElement.select(classForRemoval).remove();
+				}
+			}
+		}
+		// System.out.println(doc);
+		String content = doc.toString();// .replaceFirst("<[\\s]*html[^>]*>","<html>");
+		/* content = content.replaceFirst("<(?i)![\\s]*Doctype[^>]*", ""); */
+		contentInBytes = content.getBytes();
 		String resultFromBoilerPipe = "";
+
 		try {
 
 			resultFromBoilerPipe = contentHighlighter.process(ce,
@@ -192,9 +216,6 @@ public class ContentExtractor implements BaseArticleExractor {
 
 			e.printStackTrace();
 		}
-		resultFromBoilerPipe = "<html><head></head><body>"
-				+ resultFromBoilerPipe + "</body></html>";
-
 		return resultFromBoilerPipe;
 	}
 
@@ -204,7 +225,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		List<String> tagWithWordCount = new ArrayList<String>();
 		int absposition = 0;
 		int tagnumber = 0;
-		//int begindex = 0;
+		// int begindex = 0;
 		int lengthOfString = htmlString.length();
 		String tagName = null;
 		String tagNameWithoutAttributes = null;
@@ -218,7 +239,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			Matcher mathcerForEnd = patternForEndTag.matcher(htmlString);
 			if (isBeginningOfTag(startString)) {
 				if (matcherForStart.find()) {
-					int position  = matcherForStart.start();
+					int position = matcherForStart.start();
 					int endIndex = matcherForStart.end();
 					tagName = htmlString.substring(position, endIndex);
 					Matcher matcherForExactTagName = patternForFindingExactTagName
@@ -628,7 +649,8 @@ public class ContentExtractor implements BaseArticleExractor {
 		Elements elems = null;
 		int dateindex = 0;
 		Map<String, Integer> mapForDate = new LinkedHashMap<String, Integer>();
-		Pattern pattern = Pattern.compile(DateExtractor.regexForSelectiontags);
+		// Pattern pattern =
+		// Pattern.compile(DateExtractor.regexForSelectiontags);
 		elems = doc.getAllElements();
 		Elements allSelectedElements = elems.clone();
 		allSelectedElements = allSelectedElements
@@ -817,12 +839,12 @@ public class ContentExtractor implements BaseArticleExractor {
 		numericMonth = cal.get(Calendar.MONTH) + 1;
 
 		numericDate = cal.get(Calendar.DATE);
-		String defaultZone =  StringUtils.isBlank(zone)?"UTC":zone;
+		String defaultZone = StringUtils.isBlank(zone) ? "UTC" : zone;
 		String defalutyear = numericYear.toString();
 		String defalutDate = numericDate.toString().length() == 1 ? ("0" + numericDate
 				.toString()) : numericDate.toString();
 		numericDate = null;
-		String defalutmonth = numericMonth.toString();
+		// String defalutmonth = numericMonth.toString();
 		String defaluthourMinutes = "00:00:00";
 		String htmlDocument = "";
 		String amPmInfo = "";
@@ -1168,51 +1190,71 @@ public class ContentExtractor implements BaseArticleExractor {
 	}
 
 	public String getImage(byte[] htmlInBytes, Charset cs) {
-		ArticleExtractor ce = null;
-		ce = CommonExtractors.ARTICLE_EXTRACTOR;
-		//String imageToBeReturned = null;
-		HTMLDocument htmlDoc = new HTMLDocument(htmlInBytes, cs);
-		InputSource inps = htmlDoc.toInputSource();
-		List<Image> imagesIdentifeid = null;
-		TextDocument doc = null;
-		
-		try {
-			doc = new BoilerpipeSAXInput(htmlDoc.toInputSource())
-					.getTextDocument();
-			ce.process(doc);
-			final ImageExtractor ie = ImageExtractor.INSTANCE;
-			imagesIdentifeid = ie.process(doc, inps);
+		String documentString = null;
+		Set<String> imageUrls = null;
+		Document htmlDoc = null;
+		documentString = new String(htmlInBytes);
+		if (!StringUtils.isEmpty(documentString)) {
+			htmlDoc = Jsoup.parse(documentString);
 
-		} catch (BoilerpipeProcessingException e) {
-			e.printStackTrace();
-		} catch (SAXException e) {
+			htmlDoc.select("a").remove();
 
-			e.printStackTrace();
-		}
-		if (imagesIdentifeid != null && imagesIdentifeid.size() > 0) {
-			Collections.sort(imagesIdentifeid);
-			int index = 0;
-			while ((index < imagesIdentifeid.size())
-					&& !imagesIdentifeid.get(index).getSrc()
-							.matches("(?i)(.*jp(e)?g$)")) {
-				index++;
+			htmlDoc.select("script").remove();
+			htmlDoc.select("input").remove();
+			htmlDoc.select("noscript").remove();
+			Elements elems = htmlDoc.select("img");
+			imageUrls = new LinkedHashSet<String>();
+			for (Element element : elems) {
+				String imageUrl = null;
+				// if (StringUtils.isEmpty(imageUrl)) {
+				String imageData = element.toString();
+				List<String> imgAttrs = Utils.getMatchedStringsForGivenText(
+						ApplicationConstants.PATTERN_FOR_ATTR_DATA, imageData);
+				for (String imageAttribute : imgAttrs) {
+					imageUrl = element.attr(imageAttribute);
+					if (!imageUrl.startsWith("http")) {
+						imageUrl = Utils.getAbsoluteUrl(this.Url, imageUrl);
+					}
+					imageUrls.add(imageUrl);
+				}
+
 			}
-			index = index < imagesIdentifeid.size() ? index : imagesIdentifeid
-					.size() - 1;
-			return imagesIdentifeid.get(index).getSrc();
+			return getMainImage(imageUrls);
 		} else {
 			return null;
 		}
 	}
 
-	/*public String getImage(byte[] htmlInBytes, int browsePageCode) {
-		String htmldoc = new String(htmlInBytes);
-		Document doc = Jsoup.parse(htmldoc);
-		Elements imagesImatched = doc.select("img");
-		for (Element element : imagesImatched) {
-			if(element.attr("src")!=null)
-			{}
+	private String getMainImage(Set<String> images) {
+		BufferedImage image = null;
+		String mainImageUrl = null;
+		URL imageResourceUrl = null;
+		int maxSizeImageUrl = 0;
+		int size = 0;
+		for (String imageurl : images) {
+
+			try {
+				imageResourceUrl = new URL(imageurl);
+				image = ImageIO.read(imageResourceUrl);
+
+				size = image.getHeight() * image.getWidth();
+			} catch (IOException e) {
+				size = 0;
+				e.printStackTrace();
+			}
+			if (size >= maxSizeImageUrl && image.getHeight() > 150) {
+				maxSizeImageUrl = size;
+				mainImageUrl = imageurl;
+			}
+
 		}
-		return null;
-	}*/
+		return mainImageUrl;
+
+	}
+	/*
+	 * public String getImage(byte[] htmlInBytes, int browsePageCode) { String
+	 * htmldoc = new String(htmlInBytes); Document doc = Jsoup.parse(htmldoc);
+	 * Elements imagesImatched = doc.select("img"); for (Element element :
+	 * imagesImatched) { if(element.attr("src")!=null) {} } return null; }
+	 */
 }
