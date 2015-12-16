@@ -19,7 +19,17 @@ public class HTMLFetcherUtil {
 
 	public static Map<String,Object> getBytesFromURL(URL url) throws IOException {
 		Map<String,Object> resultMap = new HashMap<String, Object>();
-		final URLConnection conn = url.openConnection();
+		 URLConnection conn = null;
+				
+		try{
+		 conn =	url.openConnection();
+		 conn.setRequestProperty(ApplicationConstants.USER_AGENT, ApplicationConstants.USER_AGENT_VALUES);
+		 conn.connect();
+		}
+		catch(IOException ioe)
+		{
+			ioe.printStackTrace();
+		}
 		final String ct = conn.getContentType();
 
 		if (ct == null
@@ -37,6 +47,7 @@ public class HTMLFetcherUtil {
 					resultMap.put("charset", cs);
 				} catch (UnsupportedCharsetException e) {
 					// keep default
+					e.printStackTrace();
 				}
 			}
 		}

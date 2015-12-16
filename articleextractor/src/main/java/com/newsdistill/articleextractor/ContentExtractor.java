@@ -11,6 +11,7 @@ import static com.newsdistill.articleextractor.ApplicationConstants.titleTags;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -159,7 +160,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			e.printStackTrace();
 		}
 
-		resultFromBoilerPipe.replaceFirst("(display:none)(;)?", "");
+		// resultFromBoilerPipe.replaceFirst("(display:none)(;)?", "");
 
 		return resultFromBoilerPipe;
 	}
@@ -175,10 +176,10 @@ public class ContentExtractor implements BaseArticleExractor {
 
 		doc.select("script").remove();
 		// doc.select("li a").remove();
-		doc.select("head").remove();
-		// doc.select("a>img").remove();
+		//doc.select("head").remove();
+		doc.select("li a").remove();
 		doc.select("input").remove();
-
+		//System.out.println(doc);
 		// doc.select("").remove();
 		// Elements doumentElemtns = doc.getAllElements();
 
@@ -190,14 +191,35 @@ public class ContentExtractor implements BaseArticleExractor {
 				String textOrHtmldata = element.html();
 				if (textOrHtmldata.matches("[\\s]*<[.]*")) {
 					Element parentElement = element.parent();
-					classForRemoval = "." + classForRemoval;
-					parentElement.select(classForRemoval).remove();
+					String dotclassForRemoval = "." + classForRemoval;
+					if (parentElement != null) {
+						parentElement.select(dotclassForRemoval).remove();
+					}
 				}
 			}
 		}
-		// System.out.println(doc);
+		//System.out.println(doc);
+		elems = doc.select("span");
+		for (Element spanelment : elems) {
+			if (spanelment.text().length() < 4) {
+				spanelment.addClass(classForRemoval);
+				Element parentElement = spanelment.parent();
+				//String dotclassForRemoval = "." + classForRemoval;
+				if (parentElement != null) {
+					try {
+						spanelment.remove();
+
+					} catch (IllegalArgumentException ille) {
+						// parentElement.remove();
+						ille.printStackTrace();
+					}
+				}
+			}
+		}
+	//System.out.println(doc);
+
 		String content = doc.toString();// .replaceFirst("<[\\s]*html[^>]*>","<html>");
-		/* content = content.replaceFirst("<(?i)![\\s]*Doctype[^>]*", ""); */
+
 		contentInBytes = content.getBytes();
 		String resultFromBoilerPipe = "";
 
@@ -766,7 +788,7 @@ public class ContentExtractor implements BaseArticleExractor {
 
 	private static boolean isValidDate(Date dateToBeChecked) {
 		Calendar calendar = Calendar.getInstance();
-
+		// v2_Article_extraction_dec_21
 		calendar.add(Calendar.MINUTE, -10);
 
 		Date currentDate = calendar.getTime();
@@ -1197,7 +1219,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		if (!StringUtils.isEmpty(documentString)) {
 			htmlDoc = Jsoup.parse(documentString);
 
-			htmlDoc.select("a").remove();
+			htmlDoc.select("li a").remove();
 
 			htmlDoc.select("script").remove();
 			htmlDoc.select("input").remove();
@@ -1235,14 +1257,22 @@ public class ContentExtractor implements BaseArticleExractor {
 
 			try {
 				imageResourceUrl = new URL(imageurl);
-				image = ImageIO.read(imageResourceUrl);
-
+				final HttpURLConnection connection = (HttpURLConnection) imageResourceUrl
+						.openConnection();
+				connection
+						.setRequestProperty(
+								"User-Agent",
+								"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.65 Safari/537.31");
+				image = ImageIO.read(connection.getInputStream());
+                 if(image!=null)
 				size = image.getHeight() * image.getWidth();
 			} catch (IOException e) {
 				size = 0;
 				e.printStackTrace();
 			}
-			if (size >= maxSizeImageUrl && image.getHeight() > 150) {
+			if (size >= maxSizeImageUrl
+					&& (image != null)
+					&& image.getHeight() > ApplicationConstants.MINIMUM_HEIGHT_OF_IMAGE) {
 				maxSizeImageUrl = size;
 				mainImageUrl = imageurl;
 			}

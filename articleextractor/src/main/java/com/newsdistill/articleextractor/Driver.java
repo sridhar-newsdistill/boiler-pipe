@@ -18,7 +18,7 @@ public class Driver {
 		
 	String data =	null;//Utils.getHtmlAsString("http://www.sakshieducation.com/EnglishStory.aspx?cid=2&sid=115&nid=117796");
 	BaseArticleExractor article = new ContentExtractor(
-				"http://movies.ndtv.com/bollywood/shah-rukh-explains-how-he-is-an-accidental-movie-star-to-iim-bangalore-1254076?pfrom=home-topstory");
+				"http://www.motorbeam.com/2015/12/bikes/ktm-rc-390/2016-ktm-rc-390-spotted-in-india-for-the-first-time/");
 		
 		ArticleContent ac = article.getTotalContent(3,"IST");
 		System.out.println(ac.getArticleDate());

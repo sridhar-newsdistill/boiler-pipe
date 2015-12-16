@@ -38,6 +38,9 @@ public class ApplicationConstants {
 	//genreally image lies within src attibute in case if its not available in src then we are looking for attibutes starts with data-* 
     public static String REG_FOR_IMGEDATA_ATTR="(?i)(src|data[^=]*)";
     public static Pattern PATTERN_FOR_ATTR_DATA = Pattern.compile(REG_FOR_IMGEDATA_ATTR);
+    public static final String USER_AGENT="User-Agent";
+    public static final String USER_AGENT_VALUES="Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11";
+    public static final int MINIMUM_HEIGHT_OF_IMAGE= 150;
 	
 
 }
