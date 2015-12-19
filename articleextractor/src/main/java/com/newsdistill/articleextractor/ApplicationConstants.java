@@ -5,7 +5,8 @@ import java.util.regex.Pattern;
 public class ApplicationConstants {
 	public static final String titleTags = "h1|h2|title|h3|h4|.heading|#heading|meta[property=\"og:title\"]";
 	public static final String encodingForLineBreaks = "1922135";
-	public static final String encodingForImageTags = "5312219";
+	public static final String encodingForImageTags = "53122192015";
+
     public static  final String TAG_NAME_TAGNUM_DELIM = "##";  
     public static final  String TAG_CONTENT_WORDCNT_DELIM = ":::";
     public static final String REGEX_TO_FIND_CLEAN_TG_NAME_FROM_ATTRIBUTE_ENABLD_TAG = "<[\\s]*[a-zA-Z0-9]+";
@@ -37,10 +38,11 @@ public class ApplicationConstants {
 	public static String DESCRIPTION_HTML_TAGS_WHITELIST = "p,br,h1,h2,h3,h4,h5,h6,font";
 	//genreally image lies within src attibute in case if its not available in src then we are looking for attibutes starts with data-* 
     public static String REG_FOR_IMGEDATA_ATTR="(?i)(src|data[^=]*)";
-    public static Pattern PATTERN_FOR_ATTR_DATA = Pattern.compile(REG_FOR_IMGEDATA_ATTR);
+    public static String REG_EX_FOR_IMAGEATTR_EXTRACTION = "(?i)(src[\\s]*|data-[^=]*)=[\\s]*[\'\"][^\"\']*[\"\']";
+    public static Pattern PATTERN_FOR_ATTR_DATA = Pattern.compile(REG_EX_FOR_IMAGEATTR_EXTRACTION);
     public static final String USER_AGENT="User-Agent";
     public static final String USER_AGENT_VALUES="Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11";
     public static final int MINIMUM_HEIGHT_OF_IMAGE= 150;
-	
+  
 
 }

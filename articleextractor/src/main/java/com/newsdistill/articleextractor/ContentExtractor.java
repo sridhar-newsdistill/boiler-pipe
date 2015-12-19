@@ -1,16 +1,11 @@
 package com.newsdistill.articleextractor;
 
-import static com.newsdistill.articleextractor.ApplicationConstants.TAG_CONTENT_WORDCNT_DELIM;
-import static com.newsdistill.articleextractor.ApplicationConstants.TAG_NAME_TAGNUM_DELIM;
-import static com.newsdistill.articleextractor.ApplicationConstants.noTagEncoding;
-import static com.newsdistill.articleextractor.ApplicationConstants.patternForBeginningHtmlElement;
 import static com.newsdistill.articleextractor.ApplicationConstants.patternForEndTag;
-import static com.newsdistill.articleextractor.ApplicationConstants.patternForFindingExactTagName;
-import static com.newsdistill.articleextractor.ApplicationConstants.patternForStartTag;
 import static com.newsdistill.articleextractor.ApplicationConstants.titleTags;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -31,6 +26,7 @@ import java.util.StringTokenizer;
 import java.util.TimeZone;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
@@ -50,12 +46,16 @@ import com.kohlschutter.boilerpipe.sax.HTMLHighlighter;
 import com.newsdistill.articleextractor.utils.Utils;
 
 public class ContentExtractor implements BaseArticleExractor {
+
 	Logger log = Logger.getLogger(ContentExtractor.class.getName());
 	StringTokenizer titleTokens = new StringTokenizer(titleTags, "|");
-
+	final static String REGEX_FOR_ATTRIBUTECONTENT = "=[\'\"]";
+	final static Pattern PAT_FOR_TEXT_IN_ATTR = Pattern
+			.compile(REGEX_FOR_ATTRIBUTECONTENT);
 	private ArticleContent contentIdentified = new ArticleContent();
-	private String Url;
+	private String Url = null;
 	private Charset cs = null;
+	private Map<String, String> imagesInfoMap = null;
 
 	public ContentExtractor() {
 		cs = Charset.forName("UTF-8");
@@ -83,7 +83,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			this.log.info("error messaage " + e1.getMessage() + " Cause "
 					+ e1.getCause() + " stack trace" + e1.getStackTrace());
 			e1.printStackTrace();
-		} catch (IOException e1) {
+		} catch (@SuppressWarnings("hiding") IOException e1) {
 			this.log.info("error messaage " + e1.getMessage() + " Cause "
 					+ e1.getCause() + " stack trace" + e1.getStackTrace());
 			e1.printStackTrace();
@@ -105,6 +105,54 @@ public class ContentExtractor implements BaseArticleExractor {
 		} catch (IndexOutOfBoundsException arrayIndexRange) {
 			arrayIndexRange.printStackTrace();
 		}
+		return contentIdentified;
+	}
+
+	@Override
+	public ArticleContent getTotalContent(int imageLookupCode, String zone) {
+
+		byte[] htmlBytes = null;
+
+		try {
+			Map<String, Object> resultMap = HTMLFetcherUtil
+					.getBytesFromURL(new URL(this.Url));
+			htmlBytes = (byte[]) resultMap.get("bytes");
+			if (htmlBytes == null) {
+				return null;
+			}
+			this.cs = (Charset) resultMap.get("charset");
+			if (this.cs == null) {
+				this.cs = Charset.forName("UTF-8");
+			}
+
+		} catch (MalformedURLException e1) {
+
+			e1.printStackTrace();
+		} catch (@SuppressWarnings("hiding") IOException e1) {
+
+			e1.printStackTrace();
+		}
+		String contentAvailableFrom = new String(htmlBytes);
+		contentIdentified.setUrl(this.Url);
+		contentIdentified.setDomain(getDomain());
+		contentIdentified.setTitle(getTitle(contentAvailableFrom));
+		contentIdentified.setArticleDate(getDate(contentAvailableFrom, zone));
+
+		try {
+			contentIdentified.setDescription(getDescription(new URL(this.Url),
+					htmlBytes));
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IndexOutOfBoundsException arrayIndexRange) {
+			arrayIndexRange.printStackTrace();
+		}
+		// images are dependent on description
+		if (imageLookupCode < 3) {
+			contentIdentified.setImageUrl(getImage(contentAvailableFrom));
+		} else {
+			contentIdentified.setImageUrl(getImage(htmlBytes, this.cs));
+		}
+		contentIdentified.setArticleDate(getDate(contentAvailableFrom, zone));
 		return contentIdentified;
 	}
 
@@ -148,42 +196,52 @@ public class ContentExtractor implements BaseArticleExractor {
 		try {
 			Map<String, Object> resultMap = HTMLFetcherUtil
 					.getBytesFromURL(new URL(this.Url));
-			htmlBytes = (byte[]) resultMap.get("bytes");
-			this.cs = (Charset) resultMap.get("charset");
-			if (this.cs == null) {
-				this.cs = Charset.forName("UTF-8");
-			}
-
-			resultFromBoilerPipe = getDescription(new URL(this.Url), htmlBytes); // contentHighlighter.process(url,
+			if (resultMap != null) {
+				htmlBytes = (byte[]) resultMap.get("bytes");
+				this.cs = (Charset) resultMap.get("charset");
+				if (this.cs == null) {
+					this.cs = Charset.forName("UTF-8");
+				}
+				resultFromBoilerPipe = getDescription(new URL(this.Url),
+						htmlBytes);
+			}// contentHighlighter.process(url,
 		} catch (IOException e) {
-
 			e.printStackTrace();
 		}
-
-		// resultFromBoilerPipe.replaceFirst("(display:none)(;)?", "");
 
 		return resultFromBoilerPipe;
 	}
 
 	public String getDescription(URL url, byte[] contentInBytes) {
 		ArticleExtractor ce = null;
+		if (contentInBytes == null) {
+			return null;
+		}
 		ce = CommonExtractors.ARTICLE_EXTRACTOR;
 		String classForRemoval = "nd_boiler_pipe_tag";
 		final HTMLHighlighter contentHighlighter = HTMLHighlighter
 				.newHighlightingInstance();
-		String htmlDocument = new String(contentInBytes);
+		String htmlDocument = null;
+
+		try {
+
+			htmlDocument = new String(contentInBytes, "UTF-8");
+		} catch (UnsupportedEncodingException e1) {
+			e1.printStackTrace();
+		}
 		Document doc = Jsoup.parse(htmlDocument);
-
+		Map<String, String> imageUrlKeyVlaueMap = new LinkedHashMap<String, String>();
 		doc.select("script").remove();
-		// doc.select("li a").remove();
-		//doc.select("head").remove();
+		doc.select("li>a").remove();
+		doc.select("head").remove();
+		doc.select("div[style~=display:none]").remove();
 		doc.select("li a").remove();
+		doc.select("h1,h2,h3,h4 a").remove();
 		doc.select("input").remove();
-		//System.out.println(doc);
-		// doc.select("").remove();
-		// Elements doumentElemtns = doc.getAllElements();
-
-		Elements elems = doc.select("a>span");
+		doc.select("embed").remove();
+		doc.select("label").remove();
+		// System.out.println(doc.toString());
+		Elements elems = doc.select("a > span");
 		for (Element element : elems) {
 			if (element.text().length() < 20) {
 
@@ -198,131 +256,51 @@ public class ContentExtractor implements BaseArticleExractor {
 				}
 			}
 		}
-		//System.out.println(doc);
+
 		elems = doc.select("span");
 		for (Element spanelment : elems) {
 			if (spanelment.text().length() < 4) {
-				spanelment.addClass(classForRemoval);
-				Element parentElement = spanelment.parent();
-				//String dotclassForRemoval = "." + classForRemoval;
-				if (parentElement != null) {
-					try {
-						spanelment.remove();
 
-					} catch (IllegalArgumentException ille) {
-						// parentElement.remove();
-						ille.printStackTrace();
-					}
+				spanelment.addClass(classForRemoval);
+				String dotclassForRemoval = "." + classForRemoval;
+
+				if (doc != null) {
+					doc.select(dotclassForRemoval).empty();
+
+					// System.out.println(spanElems.toString());
 				}
+
 			}
 		}
-	//System.out.println(doc);
-
-		String content = doc.toString();// .replaceFirst("<[\\s]*html[^>]*>","<html>");
+		// System.out.println(doc.toString());
+		String content = getEncodedImageurlUrlContent(doc, imageUrlKeyVlaueMap);
 
 		contentInBytes = content.getBytes();
 		String resultFromBoilerPipe = "";
-
+		imagesInfoMap = imageUrlKeyVlaueMap;
 		try {
-
 			resultFromBoilerPipe = contentHighlighter.process(ce,
 					contentInBytes, this.cs);
-
+			Set<String> imageSet = imageUrlKeyVlaueMap.keySet();
+			for (String object : imageSet) {
+				resultFromBoilerPipe = resultFromBoilerPipe.replaceFirst(
+						object, imageUrlKeyVlaueMap.get(object));
+			}
 		} catch (IOException e) {
-
 			e.printStackTrace();
 		} catch (BoilerpipeProcessingException e) {
-
 			e.printStackTrace();
 		} catch (SAXException e) {
-
 			e.printStackTrace();
+		} catch (IndexOutOfBoundsException Iob) {
+			Iob.printStackTrace();
+		}catch (Exception e)
+		{
+			System.out.println(e.getMessage());
+			System.out.println(e.getCause());
 		}
+		
 		return resultFromBoilerPipe;
-	}
-
-	private String getCleanedDescription(String htmlString) {
-
-		Map<String, String> numberedTagWithContent = new LinkedHashMap<String, String>();
-		List<String> tagWithWordCount = new ArrayList<String>();
-		int absposition = 0;
-		int tagnumber = 0;
-		// int begindex = 0;
-		int lengthOfString = htmlString.length();
-		String tagName = null;
-		String tagNameWithoutAttributes = null;
-		Matcher matcherForStart = patternForStartTag.matcher(htmlString);
-
-		while (absposition < lengthOfString - 4) {
-
-			String startString = htmlString;
-
-			matcherForStart = patternForStartTag.matcher(htmlString);
-			Matcher mathcerForEnd = patternForEndTag.matcher(htmlString);
-			if (isBeginningOfTag(startString)) {
-				if (matcherForStart.find()) {
-					int position = matcherForStart.start();
-					int endIndex = matcherForStart.end();
-					tagName = htmlString.substring(position, endIndex);
-					Matcher matcherForExactTagName = patternForFindingExactTagName
-							.matcher(tagName);
-					if (matcherForExactTagName.find()) {
-						String endTag = tagName.substring(
-								matcherForExactTagName.start(),
-								matcherForExactTagName.end());
-						tagNameWithoutAttributes = "</"
-								+ endTag.substring(1, endTag.length()) + ">";
-					}
-					tagnumber++;
-					htmlString = htmlString.substring(endIndex);
-					absposition = absposition + tagName.length();
-				}
-
-			}
-			if (isEndofTheTag(htmlString)) {
-				if (mathcerForEnd.find()) {
-
-					int position = mathcerForEnd.start();
-
-					int endIndex = mathcerForEnd.end();
-					tagName = htmlString.substring(position, endIndex + 1);
-					absposition += tagName.length();
-					htmlString = htmlString.substring(endIndex);
-				}
-
-			} else {
-				if (isBeginningOfTag(htmlString)) {
-					continue;
-				}
-				if (tagName.startsWith("</")) {
-					tagName = noTagEncoding;
-					tagnumber++;
-				}
-				Matcher mathcerForDelimiterForOpenAndClosingElement = patternForBeginningHtmlElement
-						.matcher(htmlString);
-				if (mathcerForDelimiterForOpenAndClosingElement.find()) {
-					int endIndex = mathcerForDelimiterForOpenAndClosingElement
-							.start();
-					String content = htmlString.substring(0, endIndex);
-					content = content.trim();
-					int numberofWordsInContent = Utils.getWordCount(content);
-					htmlString = htmlString.substring(endIndex);
-					content = tagName + content + tagNameWithoutAttributes;
-
-					numberedTagWithContent.put(tagName + TAG_NAME_TAGNUM_DELIM
-							+ tagnumber, content);
-					tagWithWordCount.add(tagName + TAG_NAME_TAGNUM_DELIM
-							+ tagnumber + TAG_CONTENT_WORDCNT_DELIM
-							+ numberofWordsInContent);
-
-					absposition += endIndex;
-
-				}
-			}
-		}
-
-		// this should be configurable
-		return getFinalContent(numberedTagWithContent, tagWithWordCount, false);
 	}
 
 	@Override
@@ -374,7 +352,7 @@ public class ContentExtractor implements BaseArticleExractor {
 
 	@Override
 	public String getLogo() {
-		// TODO Auto-generated method stub
+
 		return null;
 	}
 
@@ -384,33 +362,12 @@ public class ContentExtractor implements BaseArticleExractor {
 		try {
 			URL articleUrl = new URL(Url);
 			domain = articleUrl.getHost();
-			// System.out.println(domain);
 		} catch (MalformedURLException e) {
 
 			e.printStackTrace();
 		}
 
 		return domain;
-	}
-
-	private boolean isBeginningOfTag(String remainingString) {
-
-		if (!StringUtils.isEmpty(remainingString)) {
-
-			Matcher matcherForStartOfTheTag = patternForStartTag
-
-			.matcher(remainingString);
-
-			boolean truthval = matcherForStartOfTheTag.find();
-
-			// System.out.println(truthval);
-
-			return truthval;
-
-		} else {
-
-			return false;
-		}
 	}
 
 	public static boolean isEndofTheTag(String remainingString) {
@@ -423,248 +380,6 @@ public class ContentExtractor implements BaseArticleExractor {
 			return false;
 		}
 
-	}
-
-	private String getFinalContent(Map<String, String> tagContent,
-			List<String> tagContentLenghts, boolean removeAnchorTag) {
-		// TODO
-		// Externalis e these properties - start
-
-		int toleranceCount = 3;
-		// boolean removeAnchorTag = false;
-
-		// Externalize these properties - end
-		List<String> sortedList = new ArrayList<String>(tagContentLenghts);
-
-		TagCountComparator tg = new TagCountComparator();
-
-		Collections.sort(sortedList, tg);
-
-		int totalWordCount = 0;
-
-		int loopSize = 0;
-
-		for (String string : sortedList) {
-
-			if (loopSize <= sortedList.size()) {
-
-				String tagNameWithIndex = (string
-						.split(TAG_CONTENT_WORDCNT_DELIM)[0]).trim();
-
-				totalWordCount = totalWordCount
-
-				+ Utils.getWordCount(tagContent.get(tagNameWithIndex));
-			} else {
-
-				break;
-
-			}
-
-		}
-
-		String tagWithMaxDescription = sortedList.get(0);
-
-		List<TagMetaData> tagMetaDatas = new ArrayList<TagMetaData>();
-
-		TagMetaData bestMatchMetaData = null;
-
-		int index = 0;
-
-		for (String metadata : tagContentLenghts) {
-
-			TagMetaData tagMetaData = new TagMetaData(metadata);
-			String text = tagContent.get(tagMetaData.getTagNameWithIndex());
-			if (text.trim().length() == 1 || StringUtils.isBlank(text.trim())) {
-				continue;
-			}
-
-			if (removeAnchorTag
-					&& tagMetaData.getTagName().toLowerCase().contains("<a>")) {
-				continue;
-			}
-			String content = text.trim().replaceAll("1922135", "</br>");
-			content = content.replaceAll("</br>[\\s]*<\br>", "1922135");
-			content = content.replaceAll(noTagEncoding, "");
-			content = content.replaceAll(
-					"</" + noTagEncoding.substring(1, noTagEncoding.length()),
-					"");
-			tagMetaData.setText(content.trim().replaceAll("1922135", "</br>"));
-			tagMetaData.setWordCount(Utils.getWordCount(text.trim()));
-			tagMetaData.setIndex(index);
-			index++;
-
-			if (metadata.equalsIgnoreCase(tagWithMaxDescription)) {
-				tagMetaData.setPartOfDescription(true);
-				bestMatchMetaData = tagMetaData;
-			}
-			tagMetaDatas.add(tagMetaData);
-		}
-
-		int avgWordCount = (int) Math.ceil(totalWordCount
-				/ (tagContentLenghts.size() / 2));
-
-		boolean traverseForward = true;
-		boolean traverseBackward = true;
-		if (bestMatchMetaData.getIndex() == tagMetaDatas.size()) {
-			traverseForward = false;
-		}
-
-		if (bestMatchMetaData.getIndex() == 0) {
-			traverseBackward = false;
-		}
-
-		int bestMatchIndex = bestMatchMetaData.getIndex();
-		index = bestMatchIndex;
-
-		if (traverseForward) {
-			while (index < tagMetaDatas.size()) {
-				index++;
-				if (index == tagMetaDatas.size()) {
-					break;
-				}
-				int currentIndex = index;
-				TagMetaData currentTag = tagMetaDatas.get(currentIndex);
-				if ((currentTag.getWordCount() > Math.ceil(0.4 * avgWordCount))) {
-					tagMetaDatas.get(currentIndex).setPartOfDescription(true);
-					enableDescriptionFlag(currentIndex, tagMetaDatas,
-							toleranceCount, true);
-				} else {
-					if (toleranceCheck(currentIndex, tagMetaDatas,
-							toleranceCount, true) == false) {
-						break;
-					}
-				}
-
-			}
-		}
-
-		index = bestMatchMetaData.getIndex();
-		if (traverseBackward) {
-			while (index >= 0) {
-				index--;
-				if (index == 0) {
-					break;
-				}
-				int currentIndex = index;
-				TagMetaData currentTag = tagMetaDatas.get(currentIndex);
-				if (currentTag.getText().matches("^(</br>)+")) {
-					tagMetaDatas.get(currentIndex).setPartOfDescription(true);
-					continue;
-				}
-
-				if ((currentTag.getWordCount() > Math.ceil(0.4 * avgWordCount))) {
-					tagMetaDatas.get(currentIndex).setPartOfDescription(true);
-					enableDescriptionFlag(currentIndex, tagMetaDatas,
-							toleranceCount, false);
-				} else {
-					if (toleranceCheck(currentIndex, tagMetaDatas,
-							toleranceCount, false) == false) {
-						break;
-					}
-				}
-
-			}
-		}
-
-		StringBuilder description = new StringBuilder();
-		for (TagMetaData tagMetaData : tagMetaDatas) {
-			if (tagMetaData.isPartOfDescription() == true) {
-				description.append(tagMetaData.getText());
-			}
-		}
-
-		String metaDataForTitle = searchTitleMetaData(tagContentLenghts);
-		if (!StringUtils.isEmpty(metaDataForTitle)) {
-			/*
-			 * System.out.println(" title" +
-			 * tagContent.get(metaDataForTitle.split(":")[0]) + "end of title");
-			 */
-		}
-		// System.out.println(description.toString().replaceAll("[\\s]+", " "));
-
-		return description.toString().replaceAll("[\\s]+", " ");
-	}
-
-	private void enableDescriptionFlag(int currentIndex,
-			List<TagMetaData> tagMetaDatas, int toleranceCount,
-			boolean traverseForward) {
-		try {
-			if (traverseForward) {
-				for (int i = 1; i <= toleranceCount; i++) {
-					if (currentIndex - i <= 0) {
-						return;
-					}
-
-					tagMetaDatas.get(currentIndex - i).setPartOfDescription(
-							true);
-				}
-			} else {
-				for (int i = 1; i <= toleranceCount; i++) {
-					if (currentIndex + i >= tagMetaDatas.size()) {
-						return;
-					}
-					tagMetaDatas.get(currentIndex + i).setPartOfDescription(
-							true);
-				}
-			}
-		} catch (IndexOutOfBoundsException ex) {
-			// do nothing
-		}
-
-	}
-
-	private boolean toleranceCheck(int currentIndex,
-			List<TagMetaData> tagMetaDatas, int toleranceCount,
-			boolean traverseForward) {
-		int index = 0;
-		// int skipCount = 0;
-
-		if (traverseForward) {
-			while (true) {
-				if (tagMetaDatas.get(currentIndex - index)
-						.isPartOfDescription() == false) {
-					// skipCount++;
-				} else {
-					return true;
-				}
-				index++;
-
-			}
-		} else {
-			while (true) {
-				if (tagMetaDatas.get(currentIndex + index)
-						.isPartOfDescription() == false) {
-					// skipCount++;
-				} else {
-					return true;
-				}
-				index++;
-
-			}
-
-		}
-	}
-
-	private String searchTitleMetaData(List<String> tagStructure) {
-		int index = 0;
-		String metaData = null;
-		while (index < tagStructure.size()) {
-			if (tagStructure.get(index).toLowerCase().contains("h1")
-					|| tagStructure.get(index).toLowerCase().contains("h2")
-					|| tagStructure.get(index).toLowerCase().contains("h3")
-					|| tagStructure.get(index).toLowerCase().contains("title")) {
-				metaData = tagStructure.get(index);
-				break;
-			} else {
-				index++;
-			}
-		}
-		return metaData;
-	}
-
-	public static boolean isContent(String remainingString, int pos) {
-
-		return false;
 	}
 
 	private Date getFinalDate(Document doc, String zone) {
@@ -1169,47 +884,8 @@ public class ContentExtractor implements BaseArticleExractor {
 		return matcherForNumericYearDate.find();
 	}
 
-	@Override
-	public ArticleContent getTotalContent(int imageLookupCode, String zone) {
-
-		byte[] htmlBytes = null;
-
-		try {
-			Map<String, Object> resultMap = HTMLFetcherUtil
-					.getBytesFromURL(new URL(this.Url));
-			htmlBytes = (byte[]) resultMap.get("bytes");
-			this.cs = (Charset) resultMap.get("charset");
-			if (this.cs == null) {
-				this.cs = Charset.forName("UTF-8");
-			}
-		} catch (MalformedURLException e1) {
-
-			e1.printStackTrace();
-		} catch (IOException e1) {
-
-			e1.printStackTrace();
-		}
-		String contentAvailableFrom = new String(htmlBytes);
-		contentIdentified.setUrl(this.Url);
-		contentIdentified.setDomain(getDomain());
-		contentIdentified.setTitle(getTitle(contentAvailableFrom));
-		contentIdentified.setArticleDate(getDate(contentAvailableFrom, zone));
-		if (imageLookupCode < 3) {
-			contentIdentified.setImageUrl(getImage(contentAvailableFrom));
-		} else {
-			contentIdentified.setImageUrl(getImage(htmlBytes, this.cs));
-		}
-		try {
-			contentIdentified.setDescription(getDescription(new URL(this.Url),
-					htmlBytes));
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (IndexOutOfBoundsException arrayIndexRange) {
-			arrayIndexRange.printStackTrace();
-		}
-		contentIdentified.setArticleDate(getDate(contentAvailableFrom, zone));
-		return contentIdentified;
-	}
+	// extracts full content form given webpage includes images retention
+	// //dependant on getDescription method
 
 	public String getImage(byte[] htmlInBytes, Charset cs) {
 		String documentString = null;
@@ -1232,19 +908,73 @@ public class ContentExtractor implements BaseArticleExractor {
 				String imageData = element.toString();
 				List<String> imgAttrs = Utils.getMatchedStringsForGivenText(
 						ApplicationConstants.PATTERN_FOR_ATTR_DATA, imageData);
+
 				for (String imageAttribute : imgAttrs) {
-					imageUrl = element.attr(imageAttribute);
+
+					Matcher matcherForTextInAttr = PAT_FOR_TEXT_IN_ATTR
+							.matcher(imageAttribute);
+					int startIndx = 0;
+					int endIndx = imageAttribute.length() - 1;
+					if (matcherForTextInAttr.find()) {
+						startIndx = matcherForTextInAttr.start();
+						// endIndx = matcherForTextInAttr.end();
+					}
+					if (startIndx == endIndx) {
+						return null;
+					}
+					imageUrl = imageAttribute.substring(startIndx + 2, endIndx);
 					if (!imageUrl.startsWith("http")) {
 						imageUrl = Utils.getAbsoluteUrl(this.Url, imageUrl);
 					}
+					if(imageUrl!=null)
 					imageUrls.add(imageUrl);
 				}
+
+				/*
+				 * for (String imageAttribute : imgAttrs) { imageUrl =
+				 * element.attr(imageAttribute); if
+				 * (!imageUrl.startsWith("http")) { imageUrl =
+				 * Utils.getAbsoluteUrl(this.Url, imageUrl); } if(imageUrl !=
+				 * null) imageUrls.add(imageUrl); }
+				 */
 
 			}
 			return getMainImage(imageUrls);
 		} else {
 			return null;
 		}
+	}
+
+	private String getEncodedImageurlUrlContent(Document doc,
+			Map<String, String> imageUrlKeyVlaueMap) {
+		StringBuilder htmlDocBuilder = new StringBuilder();
+		String document = doc.toString();
+		int keygen = 1;
+		int start = 0;
+		int end = document.length();
+
+		Matcher mathcerForImage = ApplicationConstants.patternForImageExtraction
+				.matcher(document);
+		int startIndx = 0;
+		int endIndx = document.length();
+		while (mathcerForImage.find()) {
+
+			start = mathcerForImage.start();
+
+			end = mathcerForImage.end();
+
+			String encodingVal = "<p>"
+					+ ApplicationConstants.encodingForImageTags + keygen++
+					+ "</p>";
+			String imageTag = document.substring(start, end);
+			imageUrlKeyVlaueMap.put(encodingVal, imageTag);
+			String pretext = document.substring(startIndx, start);
+			htmlDocBuilder.append(pretext + encodingVal);
+			startIndx = end;
+		}
+		htmlDocBuilder.append(document.substring(startIndx, endIndx));
+
+		return htmlDocBuilder.toString();
 	}
 
 	private String getMainImage(Set<String> images) {
@@ -1256,21 +986,20 @@ public class ContentExtractor implements BaseArticleExractor {
 		for (String imageurl : images) {
 
 			try {
+
 				imageResourceUrl = new URL(imageurl);
 				final HttpURLConnection connection = (HttpURLConnection) imageResourceUrl
 						.openConnection();
-				connection
-						.setRequestProperty(
-								"User-Agent",
-								"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.65 Safari/537.31");
+				connection.setRequestProperty(ApplicationConstants.USER_AGENT,
+						ApplicationConstants.USER_AGENT_VALUES);
 				image = ImageIO.read(connection.getInputStream());
-                 if(image!=null)
-				size = image.getHeight() * image.getWidth();
+				if (image != null)
+					size = image.getHeight() * image.getWidth();
 			} catch (IOException e) {
 				size = 0;
 				e.printStackTrace();
 			}
-			if (size >= maxSizeImageUrl
+			if (size > maxSizeImageUrl
 					&& (image != null)
 					&& image.getHeight() > ApplicationConstants.MINIMUM_HEIGHT_OF_IMAGE) {
 				maxSizeImageUrl = size;
