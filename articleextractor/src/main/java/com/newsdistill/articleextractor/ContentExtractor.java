@@ -224,7 +224,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		String classForRemoval = "nd_boiler_pipe_tag";
 		final HTMLHighlighter contentHighlighter = HTMLHighlighter
 				.newHighlightingInstance();
-		String htmlDocument = null;
+		/*String htmlDocument = null;
 
 		try {
 
@@ -278,17 +278,17 @@ public class ContentExtractor implements BaseArticleExractor {
 		// System.out.println(doc.toString());
 		String content = getEncodedImageurlUrlContent(doc, imageUrlKeyVlaueMap);
 
-		contentInBytes = content.getBytes();
+		contentInBytes = content.getBytes();*/
 		String resultFromBoilerPipe = "";
-		imagesInfoMap = imageUrlKeyVlaueMap;
+		//imagesInfoMap = imageUrlKeyVlaueMap;
 		try {
 			resultFromBoilerPipe = contentHighlighter.process(ce,
 					contentInBytes, this.cs);
-			Set<String> imageSet = imageUrlKeyVlaueMap.keySet();
+			/*Set<String> imageSet = imageUrlKeyVlaueMap.keySet();
 			for (String object : imageSet) {
 				resultFromBoilerPipe = resultFromBoilerPipe.replace(
 						object, imageUrlKeyVlaueMap.get(object));
-			}
+			}*/
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (BoilerpipeProcessingException e) {

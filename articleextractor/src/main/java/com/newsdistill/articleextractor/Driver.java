@@ -1,12 +1,9 @@
 package com.newsdistill.articleextractor;
 
 import java.io.IOException;
-import java.net.URL;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import com.newsdistill.articleextractor.utils.Utils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 public class Driver {
 	static String regExForAnchorTagRemoval = "(?i)(also)?(related|read|similar)[\\s]*(also|more)?[\\W]*<a[^>]> [^<]*(<span[^>]* [^<]*</span>)?(</a>)?";
@@ -15,18 +12,24 @@ public class Driver {
 
 	public static void main(String[] args) throws IOException {
 		long start = System.currentTimeMillis();
-		
-	String data =	null;//Utils.getHtmlAsString("http://www.sakshieducation.com/EnglishStory.aspx?cid=2&sid=115&nid=117796");
-	BaseArticleExractor article = new ContentExtractor(
-				"http://www.motorbeam.com/2015/12/bikes/ktm-rc-390/2016-ktm-rc-390-spotted-in-india-for-the-first-time/");
-		
-		ArticleContent ac = article.getTotalContent(3,"IST");
-		System.out.println(ac.getArticleDate());
-		
-		System.out.println(ac.getImageUrl());
-		System.out.println(ac.getDescription());
 
-	    //System.out.println(data);
+		String data = null;// Utils.getHtmlAsString("http://www.sakshieducation.com/EnglishStory.aspx?cid=2&sid=115&nid=117796");
+		BaseArticleExractor article = new ContentExtractor(
+				"http://www.apherald.com/Politics/ViewArticle/108742/ఎడిటోరియ‌ల్-తెలుగు-ఫైర్-బ్రాండ్-లంటే-వీరే--/");
+
+		ArticleContent ac = article.getTotalContent(3, "IST");
+		if(ac != null){
+		System.out.println(ac.getArticleDate());
+		System.out.println(ac.getDescription());
+		
+		/*doc.select("img ~ span").remove();
+		doc.select("img + span").remove();
+		doc.select("img").empty();*/
+	    System.out.println(ac.getImageUrl());
+		}
+		// System.out.println();
+        //System.out.println(doc.toString());
+		// System.out.println(data);
 		long end = System.currentTimeMillis();
 		System.out.println(end - start);
 		System.out.println((end - start) / 1000);
