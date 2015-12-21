@@ -15,7 +15,7 @@ public class Driver {
 
 		String data = null;// Utils.getHtmlAsString("http://www.sakshieducation.com/EnglishStory.aspx?cid=2&sid=115&nid=117796");
 		BaseArticleExractor article = new ContentExtractor(
-				"http://www.apherald.com/Politics/ViewArticle/108742/ఎడిటోరియ‌ల్-తెలుగు-ఫైర్-బ్రాండ్-లంటే-వీరే--/");
+				"http://www.hindustantimes.com/tech/for-the-first-time-ever-4g-smartphones-overtake-3g-smartphones/story-nUtfSg1j4pVJPRYWHvdGmI.html");
 
 		ArticleContent ac = article.getTotalContent(3, "IST");
 		if(ac != null){
