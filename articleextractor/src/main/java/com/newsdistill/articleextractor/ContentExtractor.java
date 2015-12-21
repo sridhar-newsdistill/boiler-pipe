@@ -76,6 +76,9 @@ public class ContentExtractor implements BaseArticleExractor {
 					.getBytesFromURL(new URL(this.Url));
 			htmlBytes = (byte[]) resultMap.get("bytes");
 			this.cs = (Charset) resultMap.get("charset");
+		   if(htmlBytes==null)	{
+				return null;
+			}
 			if (this.cs == null) {
 				this.cs = Charset.forName("UTF-8");
 			}
@@ -283,7 +286,7 @@ public class ContentExtractor implements BaseArticleExractor {
 					contentInBytes, this.cs);
 			Set<String> imageSet = imageUrlKeyVlaueMap.keySet();
 			for (String object : imageSet) {
-				resultFromBoilerPipe = resultFromBoilerPipe.replaceFirst(
+				resultFromBoilerPipe = resultFromBoilerPipe.replace(
 						object, imageUrlKeyVlaueMap.get(object));
 			}
 		} catch (IOException e) {
