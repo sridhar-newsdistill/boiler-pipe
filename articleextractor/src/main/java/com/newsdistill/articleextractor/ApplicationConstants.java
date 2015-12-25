@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 public class ApplicationConstants {
 	public static final String titleTags = "h1|h2|title|h3|h4|.heading|#heading|meta[property=\"og:title\"]";
 	public static final String encodingForLineBreaks = "1922135";
-	public static final String encodingForImageTags = "53122192015";
+	public static final String encodingForImageTags = "ndImage531221920152020";
 
     public static  final String TAG_NAME_TAGNUM_DELIM = "##";  
     public static final  String TAG_CONTENT_WORDCNT_DELIM = ":::";
@@ -43,6 +43,8 @@ public class ApplicationConstants {
     public static final String USER_AGENT="User-Agent";
     public static final String USER_AGENT_VALUES="Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11";
     public static final int MINIMUM_HEIGHT_OF_IMAGE= 150;
-  
+    public static final String REG_EX_FOR_RELATED_ARTICLES = "(?i)((also)?(related|read|similar)[\\s]*(also|more)?[\\W]*<a[^>]*>[^<]*(<span[^>]*[^<]*<\\/span>)?<[\\s]*\\/a>)";
+    public static String EXCLUDE_RECOMMENDED_ARTICLES_FROM_DESCRIPTION =
+    	      "read more|read also|also read|more like this|For more news|for the latest|for latest|Click here to download|see also|copy right";
 
 }
