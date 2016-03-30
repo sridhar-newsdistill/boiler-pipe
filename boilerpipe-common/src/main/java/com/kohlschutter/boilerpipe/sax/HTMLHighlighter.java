@@ -106,8 +106,8 @@ public class HTMLHighlighter {
     implementation.process(doc, is);
     
    // document=doc;
-/*    String html = implementation.html.toString();
-    if (outputHighlightOnly) {
+   String html = implementation.html.toString();
+   /*  if (outputHighlightOnly) {
       Matcher m;
 
       boolean repeat = true;
@@ -127,7 +127,7 @@ public class HTMLHighlighter {
       }
     }
 */
-    return null;
+    return html;
   }
   public String processTargetHtml(final TextDocument doc, final InputSource is)throws BoilerpipeProcessingException
   {
@@ -172,7 +172,7 @@ public class HTMLHighlighter {
   {
 	  final HTMLDocument htmlDoc= new HTMLDocument(content, cs);
 	  final TextDocument doc = new BoilerpipeSAXInput(htmlDoc.toInputSource()).getTextDocument();
-	  extractor.process(doc);
+	    extractor.process(doc);
 	    document= doc;
 	    final InputSource is = htmlDoc.toInputSource();
 	    return processTargetHtml(doc, is);
@@ -416,7 +416,7 @@ public class HTMLHighlighter {
           }
           
           
-          boolean isContentBitSet=contentBitSet.get(characterElementIdx+1);
+          boolean isContentBitSet=contentBitSet.get(characterElementIdx);
           
           if(isContentBitSet)
           {
@@ -471,7 +471,7 @@ public class HTMLHighlighter {
 
     public void endElement(String uri, String localName, String qName) throws SAXException {
     	
-    	qName =	qName.toLowerCase();
+    	
       TagAction ta = TAG_ACTIONS.get(localName);
       if (ta != null) {
         ta.beforeEnd(this, localName.toLowerCase());
@@ -496,7 +496,7 @@ public class HTMLHighlighter {
           if(isContentBitSet)
           {
         	  targetHtml.append("</");
-        	  targetHtml.append(qName);
+        	  targetHtml.append(qName.toLowerCase());
         	  targetHtml.append(">");
           }
 /*

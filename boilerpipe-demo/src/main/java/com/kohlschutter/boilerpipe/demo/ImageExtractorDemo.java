@@ -31,7 +31,7 @@ import com.kohlschutter.boilerpipe.sax.ImageExtractor;
  */
 public final class ImageExtractorDemo {
   public static void main(String[] args) throws Exception {
-    URL url = new URL("http://www.hindustantimes.com/delhi/uber-rape-case-yadav-made-life-hell-for-women-say-villagers/story-Gizx4IN6NvKNFqjNGYmAgI.html");
+    URL url = new URL("http://www.livemint.com/Politics/zA1uOWlVK6hjDt5BAmLO0H/Colorado-shooting-3-killed-9-injured-in-attack-on-family-p.html");
 
     // choose from a set of useful BoilerpipeExtractors...
     final BoilerpipeExtractor extractor = CommonExtractors.ARTICLE_EXTRACTOR;

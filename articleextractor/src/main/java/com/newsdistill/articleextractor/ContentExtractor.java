@@ -196,6 +196,10 @@ public class ContentExtractor implements BaseArticleExractor {
 					if (!StringUtils.isBlank(element.text())
 							&& element.text().length() > 15) {
 						doucmentTitle = element.html();
+						if(doucmentTitle==null)
+						{
+							continue;
+						}
 						break;
 					} else {
 						continue;
@@ -216,7 +220,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		if (imageLookupCode != 3) {
 			return getDescription(url);
 		}
-
+		resultDescFromBoilerPipe =	getDescription(url);
 		doc = Jsoup.parse(resultDescFromBoilerPipe);
 		if (doc != null) {
 			elems = doc.select("img");
@@ -264,7 +268,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		final HTMLHighlighter contentHighlighter = HTMLHighlighter
 				.newHighlightingInstance();
 		String htmlDocument = null;
-
+		
 		try {
 			htmlDocument = new String(contentInBytes, "UTF-8");
 		} catch (UnsupportedEncodingException e1) {
@@ -272,7 +276,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		}
 		Document doc = Jsoup.parse(htmlDocument);
 		Map<String, String> imageUrlKeyVlaueMap = new LinkedHashMap<String, String>();
-		doc.select("blockquote").remove(); // Remove twiter tags
+		/*doc.select("blockquote").remove(); // Remove twiter tags
 		doc.select("[class~=(?i).*(twitter|facebook).*]").remove(); // Remove
 																	// twiter
 																	// and
@@ -307,7 +311,7 @@ public class ContentExtractor implements BaseArticleExractor {
 					}
 				}
 			}
-		}
+		}*/
 
 		/*
 		 * elems = doc.select("span"); for (Element spanelment : elems) { if
@@ -346,7 +350,7 @@ public class ContentExtractor implements BaseArticleExractor {
 				}
 			}
 		}
-		Elements els = doc.select("a>img");
+	/*	Elements els = doc.select("a>img");
 		for (Element e1 : els) {
 			Node currentNode = e1.parentNode();
 			Node previousNode = currentNode.previousSibling();
@@ -361,10 +365,10 @@ public class ContentExtractor implements BaseArticleExractor {
 					currentNode.remove();
 				}
 			}
-		}
+		}*/
 
 		String content = getEncodedImageurlUrlContent(doc, imageUrlKeyVlaueMap);
-
+       //System.out.println(content);
 		contentInBytes = content.getBytes();
 		String resultFromBoilerPipe = "";
 
@@ -419,6 +423,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			htmlDoc.select("input").remove();
 			htmlDoc.select("noscript").remove();
 			Elements elems = htmlDoc.select("img");
+			System.out.println(elems);
 			imageUrls = new LinkedHashSet<String>();
 			for (Element element : elems) {
 				String imageUrl = null;

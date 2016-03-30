@@ -92,14 +92,14 @@ public class ContentParser {
 					htmlString = htmlString.substring(endIndex);
 					content = tagName + content + "</"
 							+ tagName.substring(1, tagName.length());
-					numberedTagWithContent.put(tagName + "-" + tagnumber,
+					numberedTagWithContent.put(tagName + "~~" + tagnumber,
 							content);
 					/*
 					 * numberedTagWithTokenCount.put(tagName + "-" +
 					 * tagnumber+":"+numberofWordsInContent,
 					 * numberofWordsInContent);
 					 */
-					tagWithWordCount.add(tagName + "-" + tagnumber + ":"
+					tagWithWordCount.add(tagName + "~~" + tagnumber + ":"
 							+ numberofWordsInContent);
 					absposition += endIndex;
 				}
@@ -159,7 +159,7 @@ public class ContentParser {
 				tagPositionDetails = tagAndContentCount.split(":");
 				String currentContent = tagContent.get(tagPositionDetails[0]);
 				tagNameAndItsPoistionCoordinates = tagPositionDetails[0]
-						.split("-");
+						.split("~~");
 				currentElementTagPos = Integer
 						.parseInt(tagNameAndItsPoistionCoordinates[1]);
 				// very Important minimum length should be Considered
@@ -191,7 +191,7 @@ public class ContentParser {
 				tagPositionDetails = tagAndContentCount.split(":");
 				String currentContent = tagContent.get(tagPositionDetails[0]);
 				tagNameAndItsPoistionCoordinates = tagPositionDetails[0]
-						.split("-");
+						.split("~~");
 				currentElementTagPos = Integer
 						.parseInt(tagNameAndItsPoistionCoordinates[1]);
 

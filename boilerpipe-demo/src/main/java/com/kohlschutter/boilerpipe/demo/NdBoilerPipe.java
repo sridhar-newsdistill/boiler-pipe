@@ -1,11 +1,7 @@
 package com.kohlschutter.boilerpipe.demo;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -20,7 +16,6 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import com.kohlschutter.boilerpipe.BoilerpipeProcessingException;
-import com.kohlschutter.boilerpipe.document.Image;
 import com.kohlschutter.boilerpipe.document.TextBlock;
 import com.kohlschutter.boilerpipe.extractors.ArticleExtractor;
 import com.kohlschutter.boilerpipe.extractors.CommonExtractors;
@@ -29,7 +24,7 @@ import com.kohlschutter.boilerpipe.sax.ImageExtractor;
 
 public class NdBoilerPipe {
 
-	static String regExToFindStartOfTheString = "^<[^>/]*>";
+	static String regExToFindStartOfTheString = "^<[^>]*>";
 	static String regExForEndOfTheTag = "^</[^>]*>";
 	static String delimiterBeforeOpenAndClosingTags = "<";
 	static String regexForImageExtraction = "<[\\s]*(IMG|img)[^>]*>";
@@ -64,12 +59,12 @@ public class NdBoilerPipe {
 		List<String> imageUrls = new ArrayList<>();
 		List<TextBlock> blocks = null;
 		URL pagelink = new URL(
-				"http://www.apherald.com/Politics/ViewArticle/102878/father-rented-cycles-son-is-the-minister/");
+				"http://sports.ndtv.com/cricket/news/253275-pakistan-super-league-misbah-ul-haq-younis-khan-miffed-at-being-ignored-for-icon-players-list");
 		InputSource ins = null;
 		ce = CommonExtractors.ARTICLE_EXTRACTOR;
 		final ImageExtractor ie = ImageExtractor.INSTANCE;
 
-		List<Image> imageExtracted = ie.process(pagelink, ce);
+/*		List<Image> imageExtracted = ie.process(pagelink, ce);
 		if (!(imageExtracted == null || imageExtracted.isEmpty())) {
 			Collections.sort(imageExtracted);
 			// observer first20chars length
@@ -107,15 +102,15 @@ public class NdBoilerPipe {
 						endPos));
 			}
 
-		}
+		}*/
 
 		final HTMLHighlighter obj = HTMLHighlighter.newHighlightingInstance();
 
 		String result = obj.process(pagelink, ce);
 		// System.out.println(obj.processHtml()); ;
-		blocks = obj.getTextDocument().getTextBlocks();
+		//blocks = obj.getTextDocument().getTextBlocks();
 		// obj.processTargetHtml(doc, is);
-		System.out.println(obj.getTextDocument().getTitle());
+		//System.out.println(obj.getTextDocument().getTitle());
 		if (!StringUtils.isEmpty(obj.getTextDocument().getTitle())) {
 			int titleindexpos = 0;
 			int index = 0;
@@ -148,9 +143,10 @@ public class NdBoilerPipe {
 		 * matcherForIMageTag.replaceFirst(encodingForImageTags); }
 		 */
 		result = "<html><head></head><body>" + result + "</body></html>";
+		System.out.println(result);
 		result = result.replaceAll("<BR>", "");
 		result = result.replaceAll("</BR>", encodingForLineBreaks);
-		htmlContentStack(result, removeAnchorTags);
+	System.out.println("zzzzzzzzzzzzzzzzzzzzzzzzzzzz"+htmlContentStack(result, removeAnchorTags))	;
 
 		/*
 		 * Matcher mathcerForAnchor = patternForAnchorRemoval.matcher(result);
@@ -229,13 +225,16 @@ public class NdBoilerPipe {
 							.start();
 					String content = htmlString.substring(0, endIndex);
 					content = content.trim();
+					
 					int numberofWordsInContent = getWordCount(content);
+					if(numberofWordsInContent > 0){
 					htmlString = htmlString.substring(endIndex);
 					content = tagName + content + "</"
 							+ tagName.substring(1, tagName.length());
-					numberedTagWithContent.put(tagName + "-" + tagnumber,
+					numberedTagWithContent.put(tagName + "~~" + tagnumber,
 							content);
-					tagWithWordCount.add(tagName + "-" + tagnumber + ":"
+					}
+					tagWithWordCount.add(tagName + "~~" + tagnumber + ":"
 							+ numberofWordsInContent);
 					absposition += endIndex;
 
@@ -244,10 +243,10 @@ public class NdBoilerPipe {
 		}
 
 		// getHtmlContent(numberedTagWithContent, tagWithWordCount);
-		getFinalContent(numberedTagWithContent, tagWithWordCount,
+	String htmlData = getFinalContent(numberedTagWithContent, tagWithWordCount,
 				removeAnchorTags);
 
-		return null;
+		return htmlData;
 	}
 
 	public static String getHtmlContent(Map<String, String> tagContent,
@@ -271,7 +270,7 @@ public class NdBoilerPipe {
 			int maxcontentLength = Integer.parseInt(tagPositionDetails[1]);
 			int contentLength = maxcontentLength;
 			String tagNameAndItsPoistionCoordinates[] = tagPositionDetails[0]
-					.split("-");
+					.split("~~");
 			maximumlengthContent = tagContent.get(tagPositionDetails[0]);
 			lastseentagPos = tagposionofMaximumLength = Integer
 					.parseInt(tagNameAndItsPoistionCoordinates[1]);
@@ -293,7 +292,7 @@ public class NdBoilerPipe {
 				tagPositionDetails = tagAndContentCount.split(":");
 				String currentContent = tagContent.get(tagPositionDetails[0]);
 				tagNameAndItsPoistionCoordinates = tagPositionDetails[0]
-						.split("-");
+						.split("~~");
 				currentElementTagPos = Integer
 						.parseInt(tagNameAndItsPoistionCoordinates[1]);
 				// very Important minimum length should be Considered
@@ -339,7 +338,7 @@ public class NdBoilerPipe {
 				tagPositionDetails = tagAndContentCount.split(":");
 				String currentContent = tagContent.get(tagPositionDetails[0]);
 				tagNameAndItsPoistionCoordinates = tagPositionDetails[0]
-						.split("-");
+						.split("~~");
 				currentElementTagPos = Integer
 						.parseInt(tagNameAndItsPoistionCoordinates[1]);
 
@@ -497,14 +496,14 @@ public class NdBoilerPipe {
 			}
 		}
 
-		String metaDataForTitle = searchTitleMetaData(tagContentLenghts);
+	/*	String metaDataForTitle = searchTitleMetaData(tagContentLenghts);
 		if(!StringUtils.isEmpty(metaDataForTitle))
 		{
 		System.out.println(" title"
 				+ tagContent.get(metaDataForTitle.split(":")[0])
 				+ "end of title");
 		}
-		System.out.println(description.toString().replaceAll("[\\s]+", " "));
+	*/	System.out.println(description.toString().replaceAll("[\\s]+", " "));
 
 		return null;
 	}
@@ -606,7 +605,7 @@ public class NdBoilerPipe {
 		// return false;
 	}
 
-	public static String searchTitleMetaData(List<String> tagStructure) {
+	/*public static String searchTitleMetaData(List<String> tagStructure) {
 		int index = 0;
 		String metaData = null;
 		while (index < tagStructure.size()) {
@@ -621,7 +620,7 @@ public class NdBoilerPipe {
 			}
 		}
 		return metaData;
-	}
+	}*/
 
 	public static boolean isContent(String remainingString, int pos) {
 

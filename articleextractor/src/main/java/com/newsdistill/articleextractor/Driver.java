@@ -13,15 +13,15 @@ public class Driver {
         System.out.println("printinghit");
 		//String data = null;// Utils.getHtmlAsString("http://www.sakshieducation.com/EnglishStory.aspx?cid=2&sid=115&nid=117796");
 		BaseArticleExractor article = new ContentExtractor(
-				"http://www.cinejosh.com/news-in-telugu/2/27739/bhadram-be-careful-brotheruu-bhadram-be-careful-brother-nikhil-maruthi-bhadram-be-careful-brotheruu-trailer-launch.html");
+				"http://www.thestatesman.com/news/india/politics-happened-in-dalit-student-s-death-punia/117448.html");
 
-		ArticleContent ac = article.getTotalContent();
+		ArticleContent ac = article.getTotalContent(3,"Asia/Calcutta");
 		if(ac != null){
 		System.out.println(ac.getArticleDate());
 		System.out.println(ac.getTitle());
 	System.out.println(ac.getDescription().replaceAll(regExForAnchorTagRemoval, ""));
 		
-		
+		System.out.println();
 	    System.out.println(ac.getImageUrl());
 		}
 		// System.out.println();

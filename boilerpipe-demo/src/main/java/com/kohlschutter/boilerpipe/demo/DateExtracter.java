@@ -91,6 +91,8 @@ public class DateExtracter {
 		elems = doc.getAllElements();
 		Elements allSelectedElements = elems.clone();
 		allSelectedElements = allSelectedElements.select(regexForSelectiontags);
+		if(allSelectedElements!=null&&allSelectedElements.size()>0)
+		{
 		for (Element e : allSelectedElements) {
 
 			if (e.text().toLowerCase().contains("2015")
@@ -98,30 +100,15 @@ public class DateExtracter {
 				dateCountMap(mapForDate, e.text());
 			}
 		}
-		for (Element block : elems) {
-			Attributes node = block.attributes();
-			Iterator<Attribute> it = node.iterator();
-			while (it.hasNext()) {
-				Attribute attr = it.next();
-				String val = attr.getValue();
-				val = val.toLowerCase();
-				Matcher matcher = patternval.matcher(val);
-
-				if ((matcher.find() || !StringUtils.isEmpty(val))
-						&& (val.toLowerCase().contains("date") || val
-								.toLowerCase().contains("modified"))) {
-					String probableDate = block.attr("content");
-					if (!StringUtils.isEmpty(probableDate)
-							&& (probableDate.toLowerCase().contains("2015") && probableDate
-									.length() < 100)) {
-
-						dateCountMap(mapForDate, probableDate);
-						// break;
-					}
-				}
-
-			}
 		}
+	
+		getDatesinfoAvailableInAttributes(elems, mapForDate);
+		
+		return extractDateFromIdentifiedInfo(dateindex, mapForDate);
+	}
+
+	private static Date extractDateFromIdentifiedInfo(int dateindex,
+			Map<String, Integer> mapForDate) {
 		List<Date> datesidentified = new ArrayList<Date>();
 		Set<String> dates = mapForDate.keySet();
 		if (dates.size() <= 0) {
@@ -173,6 +160,34 @@ public class DateExtracter {
 		}
 
 		return datesidentified.get(dateindex);
+	}
+
+	private static void getDatesinfoAvailableInAttributes(Elements elems,
+			Map<String, Integer> mapForDate) {
+		for (Element block : elems) {
+			Attributes node = block.attributes();
+			Iterator<Attribute> it = node.iterator();
+			while (it.hasNext()) {
+				Attribute attr = it.next();
+				String val = attr.getValue();
+				val = val.toLowerCase();
+				Matcher matcher = patternval.matcher(val);
+
+				if ((matcher.find() || !StringUtils.isEmpty(val))
+						&& (val.toLowerCase().contains("date") || val
+								.toLowerCase().contains("modified"))) {
+					String probableDate = block.attr("content");
+					if (!StringUtils.isEmpty(probableDate)
+							&& (probableDate.toLowerCase().contains("2015") && probableDate
+									.length() < 100)) {
+
+						dateCountMap(mapForDate, probableDate);
+						// break;
+					}
+				}
+
+			}
+		}
 	}
 
 	private static void dateCountMap(Map<String, Integer> mapForDate,
