@@ -41,5 +41,11 @@ public final class ArticleSentencesExtractor extends ExtractorBase {
     ArticleExtractor.INSTANCE.process(doc) | SplitParagraphBlocksFilter.INSTANCE.process(doc)
         | MinClauseWordsFilter.INSTANCE.process(doc);
   }
+  public boolean process(TextDocument doc,int channelId) throws BoilerpipeProcessingException {
+	    return
+
+	    ArticleExtractor.INSTANCE.process(doc) | SplitParagraphBlocksFilter.INSTANCE.process(doc,channelId)
+	        | MinClauseWordsFilter.INSTANCE.process(doc,channelId);
+	  }
 
 }

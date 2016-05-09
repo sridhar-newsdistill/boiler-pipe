@@ -41,4 +41,10 @@ public final class KeepEverythingWithMinKWordsExtractor extends ExtractorBase {
         | MarkEverythingContentFilter.INSTANCE.process(doc) | filter.process(doc);
   }
 
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	return SimpleBlockFusionProcessor.INSTANCE.process(doc)
+	        | MarkEverythingContentFilter.INSTANCE.process(doc) | filter.process(doc);
+}
+
 }

@@ -61,4 +61,20 @@ public final class ArticleExtractor extends ExtractorBase {
         | LargeBlockSameTagLevelToContentFilter.INSTANCE.process(doc)
         | ListAtEndFilter.INSTANCE.process(doc);
   }
+  public boolean process(TextDocument doc,int channelId) throws BoilerpipeProcessingException {
+	    return
+
+	    TerminatingBlocksFinder.INSTANCE.process(doc)
+	        | new DocumentTitleMatchClassifier(doc.getTitle()).process(doc)
+	        | NumWordsRulesClassifier.INSTANCE.process(doc)
+	        | IgnoreBlocksAfterContentFilter.DEFAULT_INSTANCE.process(doc)
+	        | TrailingHeadlineToBoilerplateFilter.INSTANCE.process(doc)
+	        | BlockProximityFusion.MAX_DISTANCE_1.process(doc)
+	        | BoilerplateBlockFilter.INSTANCE_KEEP_TITLE.process(doc)
+	        | BlockProximityFusion.MAX_DISTANCE_1_CONTENT_ONLY_SAME_TAGLEVEL.process(doc)
+	        | KeepLargestBlockFilter.INSTANCE_EXPAND_TO_SAME_TAGLEVEL_MIN_WORDS.process(doc,channelId)
+	        | ExpandTitleToContentFilter.INSTANCE.process(doc)
+	        | LargeBlockSameTagLevelToContentFilter.INSTANCE.process(doc,channelId)
+	        | ListAtEndFilter.INSTANCE.process(doc);
+	  }
 }

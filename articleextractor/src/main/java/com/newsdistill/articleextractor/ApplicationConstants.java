@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 public class ApplicationConstants {
 	public static final String titleTags = "h1|h2|title|h3|h4|.heading|#heading|meta[property=\"og:title\"]";
 	public static final String encodingForLineBreaks = "1922135";
-	public static final String encodingForImageTags = "ndImage531221920152020";
+	public static final String encodingForImageTags = "ndImageEncodedImageRetention531221920152020";
 
     public static  final String TAG_NAME_TAGNUM_DELIM = "##";  
     public static final  String TAG_CONTENT_WORDCNT_DELIM = ":::";

@@ -57,7 +57,7 @@ public class ContentExtractor implements BaseArticleExractor {
 	private ArticleContent contentIdentified = new ArticleContent();
 	private String Url = null;
 	private Charset cs = null;
-
+    private int channelId=0;
 	private String mainImageUrl = null;
 
 	// private Map<String, String> imagesInfoMap = null;
@@ -69,6 +69,11 @@ public class ContentExtractor implements BaseArticleExractor {
 	public ContentExtractor(String url) {
 		this.Url = url;
 		cs = Charset.forName("UTF-8");
+	}
+	public ContentExtractor(String url,int channelId) {
+		this.Url = url;
+		cs = Charset.forName("UTF-8");
+		this.channelId=channelId;
 	}
 
 	@Override
@@ -148,11 +153,12 @@ public class ContentExtractor implements BaseArticleExractor {
 
 			e1.printStackTrace();
 		}
-		String contentAvailableFrom = new String(htmlBytes);
+		String htmlPageContent = new String(htmlBytes);
+		
 		contentIdentified.setUrl(this.Url);
 		contentIdentified.setDomain(getDomain());
-		contentIdentified.setTitle(getTitle(contentAvailableFrom));
-		contentIdentified.setArticleDate(getDate(contentAvailableFrom, zone));
+		contentIdentified.setTitle(getTitle(htmlPageContent));
+		contentIdentified.setArticleDate(getDate(htmlPageContent, zone));
 
 		try {
 			String description = getDescription(new URL(this.Url), htmlBytes);
@@ -164,7 +170,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			contentIdentified.setDescription(descriptionDocument.toString());
 			contentIdentified.setImageUrl(getImage(imageElmentsInDescription));
 			contentIdentified
-					.setArticleDate(getDate(contentAvailableFrom, zone));
+					.setArticleDate(getDate(htmlPageContent, zone));
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (IndexOutOfBoundsException arrayIndexRange) {
@@ -194,7 +200,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			} else {
 				for (Element element : elements) {
 					if (!StringUtils.isBlank(element.text())
-							&& element.text().length() > 15) {
+							&& element.text().length() >= 10) {
 						doucmentTitle = element.html();
 						if(doucmentTitle==null)
 						{
@@ -276,70 +282,20 @@ public class ContentExtractor implements BaseArticleExractor {
 		}
 		Document doc = Jsoup.parse(htmlDocument);
 		Map<String, String> imageUrlKeyVlaueMap = new LinkedHashMap<String, String>();
-		/*doc.select("blockquote").remove(); // Remove twiter tags
-		doc.select("[class~=(?i).*(twitter|facebook).*]").remove(); // Remove
-																	// twiter
-																	// and
-																	// facebook
-																	// classes
-		doc.select("script").remove();
-		// doc.select("li>a").remove();
-		// doc.select("head").remove();
-		doc.select("div[style~=display:none]").remove();
-		// doc.select("li a").remove();
-		doc.select("h1 a").remove();
-		doc.select("h2 a").remove();
-		doc.select("h3 a").remove();
-		doc.select("h4 a").remove();
-		doc.select("h5 a").remove();
-		doc.select("input").remove();
-		doc.select("embed").remove();
-		doc.select("label").remove();
-		doc.select("textarea").remove();
-		doc.select("form").remove();
-		doc.select("div[class~=(?i).*(slider|carousel).*]").remove();
-		Elements elems = doc.select("a > span");
-		for (Element element : elems) {
-			if (element.text().length() < 20) {
-				element.addClass(classForRemoval);
-				String textOrHtmldata = element.html();
-				if (textOrHtmldata.matches("[\\s]*<[.]*")) {
-					Element parentElement = element.parent();
-					String dotclassForRemoval = "." + classForRemoval;
-					if (parentElement != null) {
-						parentElement.select(dotclassForRemoval).remove();
-					}
-				}
-			}
-		}*/
-
-		/*
-		 * elems = doc.select("span"); for (Element spanelment : elems) { if
-		 * (spanelment.text().length() < 4) {
-		 * 
-		 * spanelment.addClass(classForRemoval); String dotclassForRemoval = "."
-		 * + classForRemoval;
-		 * 
-		 * if (doc != null) { doc.select(dotclassForRemoval).empty();
-		 * 
-		 * }
-		 * 
-		 * } }
-		 */
+		
 		Elements elements2 = doc
 				.select(":matchesOwn((?i)("
 						+ ApplicationConstants.EXCLUDE_RECOMMENDED_ARTICLES_FROM_DESCRIPTION
 						+ "))");
 		for (org.jsoup.nodes.Element e : elements2) {
-			// System.out.println("Element:" + e);
-			// System.out.println("Element length:" + e.text().length());
+			
 			if (e != null) {
 				org.jsoup.nodes.Element parent = e.parent();
-				// System.out.println("parent:" + parent);
+				
 				if (parent != null) {
 					String parentText = parent.text();
 					int parentLength = parentText.length();
-					// System.out.println("parentLength:" + parentLength);
+					
 					if (parentLength <= 300) {
 						parent.remove();
 					} else if (e.text().length() <= 300) {
@@ -350,31 +306,17 @@ public class ContentExtractor implements BaseArticleExractor {
 				}
 			}
 		}
-	/*	Elements els = doc.select("a>img");
-		for (Element e1 : els) {
-			Node currentNode = e1.parentNode();
-			Node previousNode = currentNode.previousSibling();
-			Node nextNode = currentNode.nextSibling();
-			if (currentNode != null && currentNode instanceof Element
-					&& previousNode != null && previousNode instanceof TextNode
-					&& nextNode != null && nextNode instanceof TextNode) {
-				Element currentElement = (Element) currentNode;
-				if (StringUtils.isNotBlank(currentElement.ownText())) {
-					Node n = new TextNode(currentElement.ownText(), "");
-					currentElement.before(n);
-					currentNode.remove();
-				}
-			}
-		}*/
+	
+		
 
 		String content = getEncodedImageurlUrlContent(doc, imageUrlKeyVlaueMap);
-       //System.out.println(content);
+    
 		contentInBytes = content.getBytes();
 		String resultFromBoilerPipe = "";
 
 		try {
 			resultFromBoilerPipe = contentHighlighter.process(ce,
-					contentInBytes, this.cs);
+					contentInBytes, this.cs,this.channelId);
 
 			Set<String> imageSet = imageUrlKeyVlaueMap.keySet();
 			for (String object : imageSet) {
@@ -393,8 +335,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			System.out.println(e.getMessage());
 			System.out.println(e.getCause());
 		}
-		/*resultFromBoilerPipe = resultFromBoilerPipe.replaceAll(
-				ApplicationConstants.REG_EX_FOR_RELATED_ARTICLES, "");*/
+		
 		return resultFromBoilerPipe;
 	}
 
@@ -406,9 +347,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		return getFinalDate(doc, zone);
 	}
 
-	/*
-	 * public Date getDate(Document doc) { return getFinalDate(doc); }
-	 */
+	
 	public String getImage(byte[] htmlInBytes, Charset cs) {
 		String documentString = null;
 		Set<String> imageUrls = null;
@@ -418,7 +357,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			htmlDoc = Jsoup.parse(documentString);
 
 			htmlDoc.select("li a").remove();
-
+			htmlDoc.select("marquee").remove();
 			htmlDoc.select("script").remove();
 			htmlDoc.select("input").remove();
 			htmlDoc.select("noscript").remove();
@@ -453,13 +392,6 @@ public class ContentExtractor implements BaseArticleExractor {
 						imageUrls.add(imageUrl);
 				}
 
-				/*
-				 * for (String imageAttribute : imgAttrs) { imageUrl =
-				 * element.attr(imageAttribute); if
-				 * (!imageUrl.startsWith("http")) { imageUrl =
-				 * Utils.getAbsoluteUrl(this.Url, imageUrl); } if(imageUrl !=
-				 * null) imageUrls.add(imageUrl); }
-				 */
 
 			}
 			return getMainImage(imageUrls);
@@ -541,19 +473,15 @@ public class ContentExtractor implements BaseArticleExractor {
 		// Pattern pattern =
 		// Pattern.compile(DateExtractor.regexForSelectiontags);
 
-		doc.getElementsMatchingOwnText(
-				"©[\\s]+" + Calendar.getInstance().get(Calendar.YEAR) + "")
-				.remove();
+		doc.getElementsMatchingOwnText("©[\\s]+" + Calendar.getInstance().get(Calendar.YEAR) + "").remove();
 		Integer year = Calendar.getInstance().get(Calendar.YEAR);
 		elems = doc.getAllElements();
 		Elements allSelectedElements = elems.clone();
-		allSelectedElements = allSelectedElements
-				.select(DateExtractor.regexForSelectiontags);
+		allSelectedElements = allSelectedElements.select(DateExtractor.regexForSelectiontags);
 		if (allSelectedElements != null && allSelectedElements.size() > 0) {
 			for (Element e : allSelectedElements) {
 
-				if (e.text().toLowerCase().contains(year.toString())
-						&& e.text().length() < 100) {
+				if (e.text().toLowerCase().contains(year.toString()) && e.text().length() < 100) {
 					dateCountMap(mapForDate, e.text());
 
 				}
@@ -570,13 +498,10 @@ public class ContentExtractor implements BaseArticleExractor {
 					Matcher matcher = DateExtractor.patternval.matcher(val);
 
 					if ((matcher.find() || !StringUtils.isEmpty(val))
-							&& (val.toLowerCase().contains("date") || val
-									.toLowerCase().contains("modified"))) {
+							&& (val.toLowerCase().contains("date") || val.toLowerCase().contains("modified"))) {
 						String probableDate = block.attr("content");
-						if (!StringUtils.isEmpty(probableDate)
-								&& (probableDate.toLowerCase().contains(
-										year.toString()) && probableDate
-										.length() < 100)) {
+						if (!StringUtils.isEmpty(probableDate) && (probableDate.toLowerCase().contains(year.toString())
+								&& probableDate.length() < 100)) {
 
 							dateCountMap(mapForDate, probableDate);
 							// break;
@@ -596,9 +521,8 @@ public class ContentExtractor implements BaseArticleExractor {
 				int textBlockLength = element.text().length();
 				if (textBlockLength > 10 && textBlockLength < 50) {
 					if (!StringUtils.isEmpty(textFromElement)
-							&& (textFromElement.toLowerCase().contains(
-									year.toString()) && textFromElement
-									.length() < 100)) {
+							&& (textFromElement.toLowerCase().contains(year.toString())
+									&& textFromElement.length() < 100)) {
 						// System.out.println(textFromElement);
 						dateCountMap(mapForDate, textFromElement);
 						// break;
@@ -648,12 +572,13 @@ public class ContentExtractor implements BaseArticleExractor {
 		Collections.reverse(datesidentified);
 
 		if (datesidentified.size() > 0) {
-			while (!isValidDate(datesidentified.get(dateindex))) {
-
+			while (dateindex < datesidentified.size() && !isValidDate(datesidentified.get(dateindex))) {
 				dateindex++;
 			}
 
-			return datesidentified.get(dateindex);
+			return (dateindex < datesidentified.size()) ? datesidentified.get(dateindex)
+					: datesidentified.get(dateindex - 1);
+
 		} else {
 			Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 			cal.add(Calendar.HOUR, -2);
@@ -661,6 +586,7 @@ public class ContentExtractor implements BaseArticleExractor {
 			return cal.getTime();
 		}
 	}
+
 
 	private static boolean isValidDate(Date dateToBeChecked) {
 		Calendar calendar = Calendar.getInstance();
@@ -742,7 +668,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		String defalutDate = numericDate.toString().length() == 1 ? ("0" + numericDate
 				.toString()) : numericDate.toString();
 		numericDate = null;
-		// String defalutmonth = numericMonth.toString();
+		
 		String defaluthourMinutes = "00:00:00";
 		String htmlDocument = "";
 		String amPmInfo = "";
@@ -1045,9 +971,7 @@ public class ContentExtractor implements BaseArticleExractor {
 		return matcherForNumericYearDate.find();
 	}
 
-	// extracts full content form given webpage includes images retention
-	// //dependant on getDescription method
-
+	
 	public String getImage(Elements htmlDoc) {
 
 		if (htmlDoc != null) {
@@ -1125,7 +1049,8 @@ public class ContentExtractor implements BaseArticleExractor {
 		}
 		htmlDocBuilder.append(document.substring(startIndx, endIndx));
 
-		return htmlDocBuilder.toString();
+	return htmlDocBuilder.toString();
+	//	return doc.toString();
 	}
 
 	private String getMainImage(Set<String> images) {

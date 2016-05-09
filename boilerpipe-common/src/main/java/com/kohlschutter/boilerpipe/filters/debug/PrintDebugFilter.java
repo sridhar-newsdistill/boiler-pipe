@@ -63,4 +63,12 @@ public final class PrintDebugFilter implements BoilerpipeFilter {
 
     return false;
   }
+
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	// TODO Auto-generated method stub
+	out.println(doc.debugString());
+
+    return false;
+}
 }

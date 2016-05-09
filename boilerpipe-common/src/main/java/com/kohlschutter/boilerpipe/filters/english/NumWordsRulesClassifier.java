@@ -107,4 +107,10 @@ public class NumWordsRulesClassifier implements BoilerpipeFilter {
     return curr.setIsContent(isContent);
   }
 
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	// TODO Auto-generated method stub
+	return false;
+}
+
 }

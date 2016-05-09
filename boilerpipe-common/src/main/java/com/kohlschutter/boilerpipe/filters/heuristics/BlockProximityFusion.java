@@ -119,4 +119,10 @@ public final class BlockProximityFusion implements BoilerpipeFilter {
     return changes;
   }
 
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	// TODO Auto-generated method stub
+	return false;
+}
+
 }

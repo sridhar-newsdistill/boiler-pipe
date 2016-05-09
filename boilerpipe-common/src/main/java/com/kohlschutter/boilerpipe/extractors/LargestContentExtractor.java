@@ -47,4 +47,11 @@ public final class LargestContentExtractor extends ExtractorBase {
         | KeepLargestBlockFilter.INSTANCE.process(doc);
   }
 
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	return NumWordsRulesClassifier.INSTANCE.process(doc)
+	        | BlockProximityFusion.MAX_DISTANCE_1.process(doc)
+	        | KeepLargestBlockFilter.INSTANCE.process(doc);
+}
+
 }

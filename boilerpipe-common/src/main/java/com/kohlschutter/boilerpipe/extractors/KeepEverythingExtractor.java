@@ -36,4 +36,10 @@ public final class KeepEverythingExtractor extends ExtractorBase {
     return MarkEverythingContentFilter.INSTANCE.process(doc);
   }
 
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	// TODO Auto-generated method stub
+	return MarkEverythingContentFilter.INSTANCE.process(doc);
+}
+
 }
