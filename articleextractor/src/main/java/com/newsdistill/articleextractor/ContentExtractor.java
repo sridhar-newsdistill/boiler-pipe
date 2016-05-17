@@ -194,6 +194,10 @@ public class ContentExtractor implements BaseArticleExractor {
 		}
 		while (titleTokens.hasMoreElements() && doucmentTitle == null) {
 			String value = titleTokens.nextElement().toString();
+			if(this.channelId==401)
+			{
+				value="h3";
+			}
 			Elements elements = htmldoc.select(value);
 			if (elements == null || elements.first() == null) {
 				continue;
