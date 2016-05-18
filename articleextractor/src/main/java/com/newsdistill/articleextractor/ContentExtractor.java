@@ -36,8 +36,6 @@ import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
-import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.xml.sax.SAXException;
 
@@ -194,9 +192,11 @@ public class ContentExtractor implements BaseArticleExractor {
 		}
 		while (titleTokens.hasMoreElements() && doucmentTitle == null) {
 			String value = titleTokens.nextElement().toString();
-			if(this.channelId==401)
+			this.log.info("channel Id for Saamana: " + this.channelId +"  value:"+value);
+			if(this.channelId == 401)
 			{
 				value="h3";
+				this.log.info("inside loop: channel Id for Saamana: " + this.channelId +"  value:"+value);
 			}
 			Elements elements = htmldoc.select(value);
 			if (elements == null || elements.first() == null) {
