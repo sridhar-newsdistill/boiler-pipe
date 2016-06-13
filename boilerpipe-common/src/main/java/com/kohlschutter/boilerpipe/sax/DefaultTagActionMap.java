@@ -73,7 +73,7 @@ public class DefaultTagActionMap extends TagActionMap {
 
 		// added in 1.1.1
 		setTagAction("NOSCRIPT", CommonTagActions.TA_IGNORABLE_ELEMENT);
-		setTagAction("FORM", CommonTagActions.TA_IGNORABLE_ELEMENT);
+		//setTagAction("FORM", CommonTagActions.TA_IGNORABLE_ELEMENT);
 		setTagAction("INPUT", CommonTagActions.TA_IGNORABLE_ELEMENT);
 
 		// New in 1.3

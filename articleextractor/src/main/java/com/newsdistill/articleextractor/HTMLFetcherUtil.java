@@ -3,6 +3,8 @@ package com.newsdistill.articleextractor;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
@@ -14,29 +16,34 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 public class HTMLFetcherUtil {
-	private static final Pattern PAT_CHARSET = Pattern
-			.compile("charset=([^; ]+)$");
- 
+	private static final Pattern PAT_CHARSET = Pattern.compile("charset=([^; ]+)$");
+
 	public static Map<String, Object> getBytesFromURL(URL url) {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		URLConnection conn = null;
 		byte[] data = null;
-		InputStream in =null;
+		InputStream in = null;
+		URI resourceUri = null;
 		ByteArrayOutputStream bos = null;
+		String referrer = null;
 		try {
 			conn = url.openConnection();
-			conn.setRequestProperty(ApplicationConstants.USER_AGENT,
-					ApplicationConstants.USER_AGENT_VALUES);
+
+			resourceUri = new URI(url.toString());
+			referrer = resourceUri.getHost();
+			conn.setRequestProperty(ApplicationConstants.USER_AGENT, ApplicationConstants.USER_AGENT_VALUES);
+			conn.addRequestProperty("REFERRER", referrer);
 			conn.connect();
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			
+
 		}
 		final String ct = conn.getContentType();
-		
+
 		try {
-			if (ct == null
-					|| !(ct.equals("text/html") || ct.startsWith("text/html;"))) {
+			if (ct == null || !(ct.equals("text/html") || ct.startsWith("text/html;"))) {
 				throw new IOException("Unsupported content type: " + ct);
 			}
 
@@ -62,11 +69,9 @@ public class HTMLFetcherUtil {
 				if ("gzip".equalsIgnoreCase(encoding)) {
 					in = new GZIPInputStream(in);
 				} else {
-					System.err.println("WARN: unsupported Content-Encoding: "
-							+ encoding);
+					System.err.println("WARN: unsupported Content-Encoding: " + encoding);
 				}
 			}
-
 			bos = new ByteArrayOutputStream();
 			byte[] buf = new byte[4096];
 			int r;
@@ -78,9 +83,8 @@ public class HTMLFetcherUtil {
 			bos.close();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			
+
 		}
-		
 		resultMap.put("bytes", data);
 		return resultMap;
 	}
