@@ -62,8 +62,8 @@ public class HTMLFetcherUtil {
           }
         } else if (ct.contains(cs.toString())) {
           resultMap.put("charset", cs);
-        }else{
-          resultMap.put("charset", cs); 
+        } else {
+          resultMap.put("charset", Charset.forName("UTF-8"));
         }
       }
 
