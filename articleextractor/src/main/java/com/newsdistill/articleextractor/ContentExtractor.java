@@ -4,9 +4,7 @@ import static com.newsdistill.articleextractor.ApplicationConstants.patternForEn
 import static com.newsdistill.articleextractor.ApplicationConstants.titleTags;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -274,7 +272,6 @@ public class ContentExtractor implements BaseArticleExractor {
     } catch (IOException e) {
       e.printStackTrace();
     }
-
     return resultFromBoilerPipe;
   }
 
@@ -289,18 +286,12 @@ public class ContentExtractor implements BaseArticleExractor {
     String htmlDocument = null;
     this.cs = this.cs != null ? this.cs : Charset.forName("UTF-8");
     htmlDocument = new String(contentInBytes, this.cs);
-
-    InputStream ins = new ByteArrayInputStream(contentInBytes);
-
     Document doc = null;
     doc = Jsoup.parse(htmlDocument, this.Url);
-
     Map<String, String> imageUrlKeyVlaueMap = new LinkedHashMap<String, String>();
-
     Elements elements2 =
         doc.select(":matchesOwn((?i)(" + ApplicationConstants.EXCLUDE_RECOMMENDED_ARTICLES_FROM_DESCRIPTION + "))");
     for (org.jsoup.nodes.Element e : elements2) {
-
       if (e != null) {
         org.jsoup.nodes.Element parent = e.parent();
 
@@ -318,7 +309,10 @@ public class ContentExtractor implements BaseArticleExractor {
         }
       }
     }
-
+    /* channel specific fix to deal with encoding problem */
+    if (this.channelId == 357) {
+      doc.select("meta").remove();
+    }
     String content = getEncodedImageurlUrlContent(doc, imageUrlKeyVlaueMap);
     // System.out.println(doc.toString());
     contentInBytes = content.getBytes();
@@ -593,8 +587,7 @@ public class ContentExtractor implements BaseArticleExractor {
   private static boolean isValidDate(Date dateToBeChecked) {
     Calendar calendar = Calendar.getInstance();
     // v2_Article_extraction_dec_21
-    calendar.add(Calendar.MINUTE, -10);
-
+    //calendar.add(Calendar.MINUTE, -10);
     Date currentDate = calendar.getTime();
     // checking that date must be less than current time stamp
     boolean statusTobeReturned = (currentDate.before(dateToBeChecked)) ? false : true;
