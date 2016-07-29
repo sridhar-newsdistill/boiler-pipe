@@ -996,6 +996,9 @@ public class ContentExtractor implements BaseArticleExractor {
       } catch (IOException e) {
         size = 0;
         e.printStackTrace();
+      } catch (ArrayIndexOutOfBoundsException e) {
+        size = 0;
+        e.printStackTrace();
       }
       if (size > maxSizeImageUrl && (image != null)
           && image.getHeight() > ApplicationConstants.MINIMUM_HEIGHT_OF_IMAGE) {
