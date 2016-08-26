@@ -275,6 +275,7 @@ public class ContentExtractor implements BaseArticleExractor {
     return resultFromBoilerPipe;
   }
 
+  // channel specific fix has been added for astrology metatags have been removed
   public String getDescription(URL url, byte[] contentInBytes) {
     ArticleExtractor ce = null;
     if (contentInBytes == null) {
@@ -310,8 +311,10 @@ public class ContentExtractor implements BaseArticleExractor {
       }
     }
     /* channel specific fix to deal with encoding problem */
-    if (this.channelId == 357) {
+    if (this.channelId == 584) {
       doc.select("meta").remove();
+    } else if (this.channelId == 23 || this.channelId == 8) {
+      doc = removeElementsWithDisplayNone(doc);
     }
     String content = getEncodedImageurlUrlContent(doc, imageUrlKeyVlaueMap);
     // System.out.println(doc.toString());
@@ -1014,16 +1017,25 @@ public class ContentExtractor implements BaseArticleExractor {
 
   private boolean isInValidAnchorElement(Element element) {
     int textLength = element.text().length();
-    if (textLength > 35 && textLength < 120) {
+    if (textLength > 24 && textLength < 120) {
       return true;
     } else {
       return false;
     }
   }
+
   /*
    * public String getImage(byte[] htmlInBytes, int browsePageCode) { String
    * htmldoc = new String(htmlInBytes); Document doc = Jsoup.parse(htmldoc);
    * Elements imagesImatched = doc.select("img"); for (Element element :
    * imagesImatched) { if(element.attr("src")!=null) {} } return null; }
    */
+  private Document removeElementsWithDisplayNone(Document doc) {
+    if (doc == null) {
+      return null;
+    }
+    doc.getElementsByAttributeValue("style", "display: none;").remove();
+    doc.getElementsByAttributeValue("style", "display: block;").remove();
+    return doc;
+  }
 }
