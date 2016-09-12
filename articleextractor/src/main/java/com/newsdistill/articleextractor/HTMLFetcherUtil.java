@@ -4,8 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -24,6 +22,7 @@ public class HTMLFetcherUtil {
   private static final Pattern PAT_CHARSET = Pattern.compile("charset=([^; ]+)$");
 
   public static Map<String, Object> getBytesFromURL(URL url) {
+    
     Map<String, Object> resultMap = new HashMap<String, Object>();
     URLConnection conn = null;
     byte[] data = null;
@@ -58,7 +57,6 @@ public class HTMLFetcherUtil {
             cs = Charset.forName(charset);
             resultMap.put("charset", cs);
           } catch (UnsupportedCharsetException e) {
-            // keep default
             e.printStackTrace();
           }
         } else if (ct.contains(cs.toString())) {
@@ -96,6 +94,7 @@ public class HTMLFetcherUtil {
   }
 
   public static String buildItemUrl(URL resourceUri) throws UnsupportedEncodingException {
+    
     StringBuilder sbr = new StringBuilder();
     String protocol = resourceUri.getProtocol();
     String path = resourceUri.getPath();
@@ -108,14 +107,13 @@ public class HTMLFetcherUtil {
     if (StringUtils.isBlank(path)) {
       sbr.toString();
     }
-    path = URLEncoder.encode(path, "UTF-8").replaceAll("%2F", "/").replaceAll("%3D","=");
+    path = URLEncoder.encode(path, "UTF-8").replaceAll("%2F", "/").replaceAll("%3D","=").replaceAll("%25", "%");
     sbr.append(path);
     if (StringUtils.isBlank(queryParams)) {
       return sbr.toString();
     }
     sbr.append("?");
     queryParams=URLEncoder.encode(queryParams, "UTF-8").replaceAll("%2F", "/").replaceAll("%3D","=").replaceAll("%26","?");
-    System.out.println(queryParams);
     sbr.append(queryParams);
     if (StringUtils.isBlank(reference)) {
       return sbr.toString();
