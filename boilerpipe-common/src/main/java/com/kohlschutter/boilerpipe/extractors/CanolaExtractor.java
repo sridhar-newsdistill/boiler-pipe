@@ -45,6 +45,10 @@ public class CanolaExtractor extends ExtractorBase {
 
     return CLASSIFIER.process(doc);
   }
+  public boolean process(TextDocument doc,int channelId) throws BoilerpipeProcessingException {
+
+	    return CLASSIFIER.process(doc);
+	  }
 
   /**
    * The actual classifier, exposed.
@@ -90,5 +94,36 @@ public class CanolaExtractor extends ExtractorBase {
 
       return curr.setIsContent(isContent);
     }
+
+	@Override
+	public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+		List<TextBlock> textBlocks = doc.getTextBlocks();
+	      boolean hasChanges = false;
+
+	      ListIterator<TextBlock> it = textBlocks.listIterator();
+	      if (!it.hasNext()) {
+	        return false;
+	      }
+	      TextBlock prevBlock = TextBlock.EMPTY_START;
+	      TextBlock currentBlock = it.next();
+	      TextBlock nextBlock = it.hasNext() ? it.next() : TextBlock.EMPTY_START;
+
+	      hasChanges = classify(prevBlock, currentBlock, nextBlock) | hasChanges;
+
+	      if (nextBlock != TextBlock.EMPTY_START) {
+	        while (it.hasNext()) {
+	          prevBlock = currentBlock;
+	          currentBlock = nextBlock;
+	          nextBlock = it.next();
+	          hasChanges = classify(prevBlock, currentBlock, nextBlock) | hasChanges;
+	        }
+	        prevBlock = currentBlock;
+	        currentBlock = nextBlock;
+	        nextBlock = TextBlock.EMPTY_START;
+	        hasChanges = classify(prevBlock, currentBlock, nextBlock) | hasChanges;
+	      }
+
+	      return hasChanges;
+	}
   };
 }

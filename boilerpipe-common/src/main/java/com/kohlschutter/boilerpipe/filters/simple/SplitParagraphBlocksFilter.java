@@ -75,5 +75,35 @@ public final class SplitParagraphBlocksFilter implements BoilerpipeFilter {
 
     return changes;
   }
+  public boolean process(TextDocument doc,int channelId) throws BoilerpipeProcessingException {
+	    boolean changes = false;
 
+	    final List<TextBlock> blocks = doc.getTextBlocks();
+	    final List<TextBlock> blocksNew = new ArrayList<TextBlock>();
+
+	    for (TextBlock tb : blocks) {
+	      final String text = tb.getText();
+	      final String[] paragraphs = text.split("[\n\r]+");
+	      if (paragraphs.length < 2) {
+	        blocksNew.add(tb);
+	        continue;
+	      }
+	      final boolean isContent = tb.isContent();
+	      final Set<String> labels = tb.getLabels();
+	      for (String p : paragraphs) {
+	        final TextBlock tbP = new TextBlock(p);
+	        tbP.setIsContent(isContent);
+	        tbP.addLabels(labels);
+	        blocksNew.add(tbP);
+	        changes = true;
+	      }
+	    }
+
+	    if (changes) {
+	      blocks.clear();
+	      blocks.addAll(blocksNew);
+	    }
+
+	    return changes;
+	  }
 }

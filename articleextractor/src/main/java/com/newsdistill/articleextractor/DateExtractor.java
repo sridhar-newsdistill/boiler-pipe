@@ -10,8 +10,8 @@ public class DateExtractor {
 	static {
 		monthsdata.put("jan", 1);
 		monthsdata.put("feb", 2);
-		monthsdata.put("march", 3);
-		monthsdata.put("april", 4);
+		monthsdata.put("mar", 3);
+		monthsdata.put("apr", 4);
 		monthsdata.put("may", 5);
 		monthsdata.put("jun", 6);
 		monthsdata.put("jul", 7);

@@ -84,4 +84,10 @@ public final class LabelFusion implements BoilerpipeFilter {
     return set;
   }
 
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	// TODO Auto-generated method stub
+	return false;
+}
+
 }

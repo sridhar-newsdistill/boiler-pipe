@@ -31,4 +31,5 @@ public interface BoilerpipeFilter {
    * @throws BoilerpipeProcessingException
    */
   boolean process(final TextDocument doc) throws BoilerpipeProcessingException;
+  boolean process(final TextDocument doc,int channelId) throws BoilerpipeProcessingException;
 }

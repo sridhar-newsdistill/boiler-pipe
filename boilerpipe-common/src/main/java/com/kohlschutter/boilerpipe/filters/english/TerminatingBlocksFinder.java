@@ -106,4 +106,10 @@ public class TerminatingBlocksFinder implements BoilerpipeFilter {
     return c >= '0' && c <= '9';
   }
 
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	// TODO Auto-generated method stub
+	return false;
+}
+
 }

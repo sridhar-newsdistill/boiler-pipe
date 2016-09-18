@@ -114,4 +114,71 @@ public final class KeepLargestBlockFilter implements BoilerpipeFilter {
 
     return true;
   }
+  public boolean process(final TextDocument doc,int channelId) throws BoilerpipeProcessingException {
+	    List<TextBlock> textBlocks = doc.getTextBlocks();
+	    if (textBlocks.size() < 2) {
+	      return false;
+	    }
+
+	    int maxNumWords = -1;
+	    TextBlock largestBlock = null;
+
+	    int level = -1;
+
+	    int i = 0;
+	    int n = -1;
+	    for (TextBlock tb : textBlocks) {
+	      if (tb.isContent()) {
+	        final int nw = tb.getNumWords();
+
+	        if (nw > maxNumWords) {
+	          largestBlock = tb;
+	          maxNumWords = nw;
+
+	          n = i;
+
+	          if (expandToSameLevelText) {
+	            level = tb.getTagLevel();
+	          }
+	        }
+	      }
+	      i++;
+	    }
+	    for (TextBlock tb : textBlocks) {
+	      if (tb == largestBlock) {
+	        tb.setIsContent(true);
+	        tb.addLabel(DefaultLabels.VERY_LIKELY_CONTENT);
+	      } else {
+	        tb.setIsContent(false);
+	        tb.addLabel(DefaultLabels.MIGHT_BE_CONTENT);
+	      }
+	    }
+	    if (expandToSameLevelText && n != -1) {
+
+	      for (ListIterator<TextBlock> it = textBlocks.listIterator(n); it.hasPrevious();) {
+	        TextBlock tb = it.previous();
+	        final int tl = tb.getTagLevel();
+	        if (tl < level) {
+	          break;
+	        } else if (tl == level) {
+	          if (tb.getNumWords() >= minWords) {
+	            tb.setIsContent(true);
+	          }
+	        }
+	      }
+	      for (ListIterator<TextBlock> it = textBlocks.listIterator(n); it.hasNext();) {
+	        TextBlock tb = it.next();
+	        final int tl = tb.getTagLevel();
+	        if (tl < level) {
+	          break;
+	        } else if (tl == level) {
+	          if (tb.getNumWords() >= minWords) {
+	            tb.setIsContent(true);
+	          }
+	        }
+	      }
+	    }
+
+	    return true;
+	  }
 }

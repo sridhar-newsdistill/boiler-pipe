@@ -44,4 +44,10 @@ public class DefaultExtractor extends ExtractorBase {
         | BlockProximityFusion.MAX_DISTANCE_1.process(doc)
         | DensityRulesClassifier.INSTANCE.process(doc);
   }
+
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	// TODO Auto-generated method stub
+	return false;
+}
 }

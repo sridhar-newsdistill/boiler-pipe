@@ -78,4 +78,10 @@ public final class KeepLargestFulltextBlockFilter extends HeuristicFilterBase im
 
     return true;
   }
+
+@Override
+public boolean process(TextDocument doc, int channelId) throws BoilerpipeProcessingException {
+	// TODO Auto-generated method stub
+	return false;
+}
 }
