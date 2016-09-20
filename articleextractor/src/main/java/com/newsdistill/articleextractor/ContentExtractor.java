@@ -1038,6 +1038,7 @@ public class ContentExtractor implements BaseArticleExractor {
       return null;
     }
     doc.getElementsByAttributeValue("style", "display: none;").remove();
+    doc.getElementsByAttributeValue("style", "display:none").remove();
     doc.getElementsByAttributeValue("style", "display: block;").remove();
     return doc;
   }
