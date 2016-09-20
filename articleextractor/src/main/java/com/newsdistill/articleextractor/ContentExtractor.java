@@ -313,7 +313,7 @@ public class ContentExtractor implements BaseArticleExractor {
     /* channel specific fix to deal with encoding problem */
     if (this.channelId == 584) {
       doc.select("meta").remove();
-    } else if (this.channelId == 23 || this.channelId == 8) {
+    } else if (this.channelId == 23 || this.channelId == 8 || this.channelId == 360) {
       doc = removeElementsWithDisplayNone(doc);
     }
     String content = getEncodedImageurlUrlContent(doc, imageUrlKeyVlaueMap);
