@@ -50,6 +50,7 @@ public class DefaultTagActionMap extends TagActionMap {
 		setTagAction("I", CommonTagActions.TA_INLINE_NO_WHITESPACE);
 		setTagAction("EM", CommonTagActions.TA_INLINE_NO_WHITESPACE);
 		setTagAction("STRONG", CommonTagActions.TA_INLINE_NO_WHITESPACE);
+		setTagAction("ARTICLE", CommonTagActions.TA_INLINE_NO_WHITESPACE);
 		setTagAction("SPAN", CommonTagActions.TA_INLINE_NO_WHITESPACE);
 		setTagAction("IFRAME", CommonTagActions.TA_INLINE_NO_WHITESPACE);
 
