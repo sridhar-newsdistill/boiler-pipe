@@ -33,6 +33,7 @@ public class DefaultTagActionMap extends TagActionMap {
 	public static final TagActionMap INSTANCE = new DefaultTagActionMap();
 
 	protected DefaultTagActionMap() {
+	  
 		setTagAction("STYLE", CommonTagActions.TA_IGNORABLE_ELEMENT);
 		setTagAction("SCRIPT", CommonTagActions.TA_IGNORABLE_ELEMENT);
 		setTagAction("OPTION", CommonTagActions.TA_IGNORABLE_ELEMENT);
@@ -40,6 +41,7 @@ public class DefaultTagActionMap extends TagActionMap {
 		setTagAction("EMBED", CommonTagActions.TA_IGNORABLE_ELEMENT);
 		setTagAction("APPLET", CommonTagActions.TA_IGNORABLE_ELEMENT);
 		setTagAction("LINK", CommonTagActions.TA_IGNORABLE_ELEMENT);
+		setTagAction("MARQUEE", CommonTagActions.TA_IGNORABLE_ELEMENT);
 
 		setTagAction("A", CommonTagActions.TA_ANCHOR_TEXT);
 		setTagAction("BODY", CommonTagActions.TA_BODY);
