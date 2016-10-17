@@ -771,7 +771,7 @@ public class ContentExtractor implements BaseArticleExractor {
             begIndexForMonth = matcherForMonthName.start();
             endIndexForMonth = matcherForMonthName.end();
             String monthName = pretextContainingInformation.substring(begIndexForMonth, endIndexForMonth);
-            numericMonth = DateExtractor.monthsdata.get(monthName.toLowerCase());
+            numericMonth = DateExtractor.monthsdata.get(monthName.substring(0, 3).toLowerCase());
             String textBetweenMonthAndHours =
                 pretextContainingInformation.substring(endIndexForMonth, begIndexForHourInfo);
             // textBetweenMonthAndHours.
